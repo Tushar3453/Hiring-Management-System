@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  STUDENT
+  RECRUITER
+  ADMIN
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SHORTLISTED
+  INTERVIEW
+  OFFERED
+  HIRED
+  REJECTED
+}
+
+model User {
+  id        String        @id @default(uuid())
+  email     String        @unique
+  password  String
+  firstName String? 
+  lastName  String?
+  role      Role          @default(STUDENT)
+  createdAt DateTime      @default(now())
+  jobs      Job[]         @relation("RecruiterJobs") // for recruiter (RecruiterJobs is the name of the relation)
+  apps      Application[] //for student
+}
+
+model Job {
+  id           String        @id @default(uuid())
+  title        String
+  description  String
+  location     String?       @default("Remote") 
+  
+  minSalary    Int?          
+  maxSalary    Int?          
+  currency     String        @default("INR")
+  
+  requirements String[]      
+  recruiterId  String
+  recruiter    User          @relation("RecruiterJobs", fields: [recruiterId], references: [id])
+  apps         Application[]
+  createdAt    DateTime      @default(now())
+}
+
+model Application {
+  id        String            @id @default(uuid())
+  status    ApplicationStatus @default(APPLIED)
+  studentId String
+  student   User              @relation(fields: [studentId], references: [id])
+  jobId     String
+  job       Job               @relation(fields: [jobId], references: [id])
+}
