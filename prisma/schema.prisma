@@ -29,6 +29,10 @@ model User {
   password  String
   firstName String? 
   lastName  String?
+
+  companyName     String?       // For Recruiter
+  institutionName String?       // For Student
+  
   role      Role          @default(STUDENT)
   createdAt DateTime      @default(now())
   jobs      Job[]         @relation("RecruiterJobs") // for recruiter (RecruiterJobs is the name of the relation)
@@ -39,6 +43,7 @@ model Job {
   id           String        @id @default(uuid())
   title        String
   description  String
+  companyName  String
   location     String?       @default("Remote") 
   
   minSalary    Int?          

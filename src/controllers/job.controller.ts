@@ -20,3 +20,29 @@ export const postJob = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// GET All Jobs
+export const getJobs = async (req: Request, res: Response) => {
+  try {
+    const jobs = await JobService.getAllJobs();
+    res.status(200).json(jobs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// GET Single Job
+export const getSingleJob = async (req: Request, res: Response) => {
+  try {
+    const job = await JobService.getJobById(req.params.id as string);
+    
+    if (!job) {
+       res.status(404).json({ message: "Job not found" });
+       return;
+    }
+    
+    res.status(200).json(job);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};

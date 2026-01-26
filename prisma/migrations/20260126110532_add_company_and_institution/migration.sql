@@ -1,0 +1,12 @@
+/*
+  Warnings:
+
+  - Added the required column `companyName` to the `Job` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- AlterTable
+ALTER TABLE "Job" ADD COLUMN     "companyName" TEXT NOT NULL;
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "companyName" TEXT,
+ADD COLUMN     "institutionName" TEXT;

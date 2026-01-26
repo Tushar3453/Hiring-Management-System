@@ -4,29 +4,38 @@ import { prisma } from '../config/prisma.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key';
 
-// REGISTER 
+// REGISTER
 export const registerUser = async (userData: any) => {
-    const { email, password, firstName, lastName, role } = userData;
+  const { email, password, firstName, lastName, role, companyName, institutionName } = userData;
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) throw new Error("User already exists");
+  // Check Validations
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) throw new Error("User already exists");
 
-    // Hash Password
-    const hashedPassword = await bcrypt.hash(password, 10);
+  // Hash Password
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create User
-    return await prisma.user.create({
-        data: {
-            email,
-            password: hashedPassword,
-            firstName,
-            lastName,
-            role: role || 'STUDENT'
-        },
-        // Sensitive data return nahi karte
-        select: { id: true, email: true, role: true, firstName: true }
-    });
+  // Save to Database
+  const user = await prisma.user.create({
+    data: {
+      email,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      role: role || 'STUDENT',
+      companyName: role === 'RECRUITER' ? companyName : null,
+      institutionName: role === 'STUDENT' ? institutionName : null
+    },
+    select: { 
+      id: true, 
+      email: true, 
+      role: true, 
+      companyName: true, 
+      institutionName: true 
+    }
+  });
+
+  return user;
 };
 
 // LOGIN
