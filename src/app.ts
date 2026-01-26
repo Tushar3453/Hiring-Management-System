@@ -1,8 +1,7 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import authRoutes from './routes/auth.routes.js'; 
+import jobRoutes from './routes/job.routes.js';
 
 const app: Application = express();
 
@@ -10,9 +9,12 @@ const app: Application = express();
 app.use(cors());
 app.use(express.json());
 
-// Health Check Route (Sirf ye check karne ke liye ki server chal raha hai)
-app.get('/', (req: Request, res: Response) => {
-  res.status(200).json({ message: "HMS Backend is Running! 🚀" });
+app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
+
+// Health Check
+app.get('/', (req, res) => {
+  res.json({ message: "HMS Backend is ALIVE! 🚀" });
 });
 
 export default app;
