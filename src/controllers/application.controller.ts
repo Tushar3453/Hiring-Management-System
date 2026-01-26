@@ -45,3 +45,27 @@ export const getMyApplications = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Recruiter: To see job applicants
+export const getJobApplications = async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const applications = await ApplicationService.getApplicationsByJobId(jobId as string);
+    res.status(200).json(applications);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Recruiter: To update application status
+export const updateStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; // Application ID
+    const { status } = req.body; // New Status (e.g., "SHORTLISTED")
+
+    const updatedApp = await ApplicationService.updateApplicationStatus(id as string, status);
+    res.status(200).json({ message: "Status updated!", updatedApp });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};

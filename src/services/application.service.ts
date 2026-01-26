@@ -40,3 +40,29 @@ export const getApplicationsByStudent = async (userId: string) => {
         orderBy: { status: 'asc' } // Sort by status or date
     });
 };
+
+// get applications by job id for recruiter
+export const getApplicationsByJobId = async (jobId: string) => {
+  return await prisma.application.findMany({
+    where: { jobId },
+    include: {
+      student: {
+        select: { 
+          id: true, 
+          firstName: true, 
+          lastName: true, 
+          email: true, 
+          institutionName: true
+        }
+      }
+    }
+  });
+};
+
+// update application status
+export const updateApplicationStatus = async (applicationId: string, status: any) => {
+  return await prisma.application.update({
+    where: { id: applicationId },
+    data: { status }
+  });
+};
