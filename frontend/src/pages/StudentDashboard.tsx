@@ -50,7 +50,7 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       {/* Header Section */}
-      <div className="max-w-7xl mx-auto mb-8">
+      <div className="max-w-7xl mx-auto mb-10 text-center">
         <h1 className="text-3xl font-bold text-gray-800">Find Your Dream Job</h1>
         <p className="text-gray-500 mt-1">
           Welcome back, <span className="font-semibold text-blue-600">{auth?.user?.firstName}</span> 👋. Here are the latest openings for you.
