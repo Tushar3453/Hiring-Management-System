@@ -35,7 +35,7 @@ const Navbar = () => {
           {/* LEFT: Logo */}
           <Link to="/" className="flex items-center gap-2">
             <span className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-              HMS
+              HireHub
             </span>
           </Link>
           
@@ -97,11 +97,19 @@ const Navbar = () => {
                   {/* Dropdown Menu Body */}
                   {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 animate-in fade-in zoom-in-95 duration-200 z-50">
-                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 mb-1">
-                        <p className="text-sm font-bold text-gray-900 truncate">
-                          {auth.user.firstName} {auth.user.lastName}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">{auth.user.email}</p>
+                      
+                      {/* 👇 User Info Header (AB LINK HAI) */}
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 mb-1 hover:bg-gray-100 transition-colors">
+                        <Link 
+                          to="/profile" 
+                          className="block"
+                          onClick={() => setIsDropdownOpen(false)} // Click karne par band ho jaye
+                        >
+                          <p className="text-sm font-bold text-gray-900 truncate hover:text-blue-600">
+                            {auth.user.firstName} {auth.user.lastName}
+                          </p>
+                          <p className="text-xs text-blue-500 font-medium truncate mt-0.5">View Profile</p>
+                        </Link>
                       </div>
 
                       {/* Menu Items */}

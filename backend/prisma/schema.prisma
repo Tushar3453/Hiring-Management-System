@@ -32,7 +32,16 @@ model User {
 
   companyName     String?       // For Recruiter
   institutionName String?       // For Student
-  
+
+  // Profile Fields
+  bio             String?
+  location        String?
+  website         String?
+  linkedin        String?
+  github          String?       // For Student
+  skills          String[]      
+  designation     String?       // For Recruiter
+
   role      Role          @default(STUDENT)
   createdAt DateTime      @default(now())
   jobs      Job[]         @relation("RecruiterJobs") // for recruiter (RecruiterJobs is the name of the relation)

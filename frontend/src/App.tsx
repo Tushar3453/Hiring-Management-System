@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import StudentDashboard from './pages/StudentDashboard';
 // import RecruiterDashboard from './pages/RecruiterDashboard'; 
 import { AuthContext } from './context/AuthContext';
+import Home from './pages/Home';
+import Profile from './pages/Profile';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => { 
   const auth = useContext(AuthContext);
@@ -20,7 +22,7 @@ function App() {
       <Navbar />
       <div className="min-h-screen bg-gray-50"> 
         <Routes>
-          <Route path="/" element={<div className="p-10 text-center text-3xl font-bold text-gray-700">Welcome to HMS 🚀</div>} />
+         <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
           
@@ -37,6 +39,11 @@ function App() {
             </PrivateRoute>
           } /> */}
 
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
+          } />
         </Routes>
       </div>
     </Router>
