@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import * as UserService from '../services/user.service';
-import { 
-  User, MapPin, Globe, Linkedin, Github, 
-  Briefcase, GraduationCap, Edit2, Save, X 
+import {
+  User, MapPin, Globe, Linkedin, Github,
+  Briefcase, GraduationCap, Edit2, Save, X
 } from 'lucide-react';
 
 const Profile = () => {
   const [profile, setProfile] = useState<UserService.UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+
   // Edit Mode Logic
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserService.UserProfile>>({});
@@ -22,7 +23,7 @@ const Profile = () => {
     try {
       const data = await UserService.getProfile();
       setProfile(data);
-      setFormData(data); 
+      setFormData(data);
     } catch (error) {
       console.error("Failed to load profile", error);
     } finally {
@@ -41,15 +42,46 @@ const Profile = () => {
     setFormData({ ...formData, skills: skillsArray });
   };
 
-  // 3. Save Changes
+  // Save Changes
   const handleSave = async () => {
     try {
-      await UserService.updateProfile(formData);
-      setProfile(formData as UserService.UserProfile); // update ui
-      setIsEditing(false); 
+      const data = new FormData();
+
+      // append all text fields
+      Object.keys(formData).forEach(key => {
+        const value = (formData as any)[key];
+        if (value !== null && value !== undefined) {
+          // handle array specific logic for skills
+          if (key === 'skills' && Array.isArray(value)) {
+            data.append(key, value.join(','));
+          } else {
+            data.append(key, value);
+          }
+        }
+      });
+
+      // append resume file if selected
+      if (resumeFile) {
+        data.append('resume', resumeFile);
+      }
+
+      await UserService.updateProfile(data);
+
+      // refresh profile data
+      const updatedProfile = await UserService.getProfile();
+      setProfile(updatedProfile);
+      setIsEditing(false);
+      setResumeFile(null);
       alert("Profile Updated Successfully!");
     } catch (error) {
+      console.error(error);
       alert("Error updating profile");
+    }
+  };
+  // handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setResumeFile(e.target.files[0]);
     }
   };
 
@@ -61,7 +93,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-        
+
         {/* === LEFT COLUMN: Identity Card === */}
         <div className="md:col-span-1 space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
@@ -70,7 +102,7 @@ const Profile = () => {
                 {profile.firstName?.[0]}{profile.lastName?.[0]}
               </span>
             </div>
-            
+
             {/* Name & Role */}
             <h2 className="text-xl font-bold text-gray-900">{profile.firstName} {profile.lastName}</h2>
             <p className="text-sm text-gray-500 font-medium mt-1">{isStudent ? 'Student' : 'Recruiter'}</p>
@@ -79,9 +111,9 @@ const Profile = () => {
             <div className="flex items-center justify-center gap-2 mt-4 text-gray-600">
               <MapPin className="w-4 h-4" />
               {isEditing ? (
-                <input 
-                  name="location" 
-                  value={formData.location || ''} 
+                <input
+                  name="location"
+                  value={formData.location || ''}
                   onChange={handleChange}
                   placeholder="City, Country"
                   className="border rounded px-2 py-1 text-sm w-full"
@@ -95,7 +127,7 @@ const Profile = () => {
           {/* Social Links Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
             <h3 className="font-semibold text-gray-900">Social Links</h3>
-            
+
             {/* Website */}
             <div className="flex items-center gap-3 text-sm">
               <Globe className="w-4 h-4 text-gray-400" />
@@ -132,19 +164,19 @@ const Profile = () => {
 
         {/* === RIGHT COLUMN: Details === */}
         <div className="md:col-span-2 space-y-6">
-          
+
           {/* Main Info Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 relative">
-            
+
             {/* Header with Edit Button */}
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">About</h1>
                 <p className="text-gray-500">Manage your professional information</p>
               </div>
-              
+
               {!isEditing ? (
-                <button 
+                <button
                   onClick={() => setIsEditing(true)}
                   className="flex items-center gap-2 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors font-medium"
                 >
@@ -152,22 +184,22 @@ const Profile = () => {
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <button onClick={() => setIsEditing(false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><X className="w-5 h-5"/></button>
-                  <button onClick={handleSave} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Save className="w-4 h-4"/> Save</button>
+                  <button onClick={() => setIsEditing(false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><X className="w-5 h-5" /></button>
+                  <button onClick={handleSave} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" /> Save</button>
                 </div>
               )}
             </div>
 
             {/* Fields */}
             <div className="space-y-6">
-              
+
               {/* Bio */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
                 {isEditing ? (
-                  <textarea 
-                    name="bio" 
-                    value={formData.bio || ''} 
+                  <textarea
+                    name="bio"
+                    value={formData.bio || ''}
                     onChange={handleChange}
                     rows={4}
                     className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-100 outline-none"
@@ -217,9 +249,9 @@ const Profile = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-3">Skills</label>
                   {isEditing ? (
                     <div>
-                      <input 
+                      <input
                         name="skills"
-                        value={formData.skills?.join(', ') || ''} 
+                        value={formData.skills?.join(', ') || ''}
                         onChange={handleSkillsChange}
                         placeholder="React, Node.js, Python (comma separated)"
                         className="w-full border border-gray-300 rounded-lg p-3"
@@ -239,7 +271,35 @@ const Profile = () => {
                   )}
                 </div>
               )}
-              
+              {isStudent && (
+                <div className="pt-4 border-t border-gray-100">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Resume</label>
+                  {isEditing ? (
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleFileChange}
+                      className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {profile.resumeUrl ? (
+                        <a
+                          href={profile.resumeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-sm font-medium"
+                        >
+                          View Resume
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No resume uploaded</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           </div>
         </div>

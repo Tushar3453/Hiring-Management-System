@@ -7,13 +7,14 @@ export interface UserProfile {
   lastName: string;
   email: string;
   role: 'STUDENT' | 'RECRUITER';
-  
+
   // Optional Profile Fields
   bio?: string;
   location?: string;
   website?: string;
   linkedin?: string;
   github?: string;
+  resumeUrl?: string;
   skills?: string[]; // Array of strings
   companyName?: string;
   designation?: string;
@@ -22,12 +23,16 @@ export interface UserProfile {
 
 // Get Profile
 export const getProfile = async () => {
-  const response = await api.get<UserProfile>('/user/profile');
+  const response = await api.get('user/profile');
   return response.data;
 };
 
-// Update Profile
-export const updateProfile = async (data: Partial<UserProfile>) => {
-  const response = await api.put('/user/profile', data);
+// update profile with form data
+export const updateProfile = async (data: Partial<UserProfile> | FormData): Promise<UserProfile> => {
+  const response = await api.put('/user/profile', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data', // required for file upload
+    },
+  });
   return response.data;
 };

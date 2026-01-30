@@ -39,6 +39,7 @@ model User {
   website         String?
   linkedin        String?
   github          String?       // For Student
+  resumeUrl       String?       // For Student
   skills          String[]      
   designation     String?       // For Recruiter
 
