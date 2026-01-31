@@ -1,22 +1,37 @@
-import axios from 'axios';
+import api from './api';
 
-const API_URL = 'http://localhost:5000/api';
+export interface JobData {
+  title: string;
+  description: string;
+  companyName: string;
+  location: string;
+  minSalary: string | number;
+  maxSalary: string | number;
+  currency: string;
+  requirements: string[];
+}
 
-// get all jobs
-export const getAllJobs = async (token: string) => {
-  const config = {
-    headers: { Authorization: `Bearer ${token}` },
+// Post a Job (Recruiter)
+export const postJob = async (jobData: JobData) => {
+  // Backend expects numbers, convert strings to numbers
+  const payload = {
+    ...jobData,
+    minSalary: Number(jobData.minSalary),
+    maxSalary: Number(jobData.maxSalary),
   };
-  const response = await axios.get(`${API_URL}/jobs`, config);
+  
+  const response = await api.post('/jobs', payload);
   return response.data;
 };
 
-// apply for job
-export const applyForJob = async (jobId: string, token: string) => {
-  const config = {
-    headers: { Authorization: `Bearer ${token}` },
-  };
-  // Backend expects: { jobId: "..." }
-  const response = await axios.post(`${API_URL}/applications`, { jobId }, config);
+// Get All Jobs (Student)
+export const getAllJobs = async () => {
+  const response = await api.get('/jobs');
+  return response.data;
+};
+
+// Apply for Job (Student - Future Use)
+export const applyForJob = async (jobId: string) => {
+  const response = await api.post('/applications', { jobId });
   return response.data;
 };

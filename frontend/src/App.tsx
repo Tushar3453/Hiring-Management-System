@@ -8,6 +8,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import { AuthContext } from './context/AuthContext';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import PostJob from './pages/PostJob';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => { 
   const auth = useContext(AuthContext);
@@ -44,6 +45,7 @@ function App() {
               <Profile />
             </PrivateRoute>
           } />
+          <Route path="/post-job" element={<PostJob />} />
         </Routes>
       </div>
     </Router>
