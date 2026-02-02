@@ -4,11 +4,13 @@ import Navbar from './components/Navbar';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import StudentDashboard from './pages/StudentDashboard';
-// import RecruiterDashboard from './pages/RecruiterDashboard'; 
+import RecruiterDashboard from './pages/RecruiterDashboard'; 
 import { AuthContext } from './context/AuthContext';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import PostJob from './pages/PostJob';
+import MyApplications from './pages/MyApplications';
+import JobApplications from './pages/JobApplications';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => { 
   const auth = useContext(AuthContext);
@@ -34,11 +36,11 @@ function App() {
             </PrivateRoute>
           } />
           
-          {/* <Route path="/recruiter-dashboard" element={
+          <Route path="/recruiter-dashboard" element={
             <PrivateRoute>
               <RecruiterDashboard />
             </PrivateRoute>
-          } /> */}
+          } />
 
           <Route path="/profile" element={
             <PrivateRoute>
@@ -46,6 +48,8 @@ function App() {
             </PrivateRoute>
           } />
           <Route path="/post-job" element={<PostJob />} />
+          <Route path="/my-applications" element={<MyApplications />} />
+          <Route path="/job/:jobId/applications" element={<JobApplications />} />
         </Routes>
       </div>
     </Router>

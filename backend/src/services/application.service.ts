@@ -31,6 +31,7 @@ export const getApplicationsByStudent = async (userId: string) => {
                 select: {
                     title: true,
                     location: true,
+                    companyName: true,
                     recruiter: {
                         select: { firstName: true, email: true } // Company/Recruiter info
                     }
@@ -52,7 +53,11 @@ export const getApplicationsByJobId = async (jobId: string) => {
           firstName: true, 
           lastName: true, 
           email: true, 
-          institutionName: true
+          institutionName: true,
+          resumeUrl: true,
+          skills: true,
+          bio: true,
+          location: true
         }
       }
     }

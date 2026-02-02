@@ -46,3 +46,20 @@ export const getSingleJob = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Recruiter: Get posted jobs
+export const getMyJobs = async (req: Request, res: Response) => {
+  try {
+    const recruiterId = (req as AuthRequest).user?.id;
+
+    if (!recruiterId) {
+       res.status(401).json({ message: "Unauthorized" });
+       return;
+    }
+
+    const jobs = await JobService.getJobsByRecruiter(recruiterId);
+    res.status(200).json(jobs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};

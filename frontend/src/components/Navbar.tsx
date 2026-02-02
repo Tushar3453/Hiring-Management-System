@@ -76,12 +76,12 @@ const Navbar = () => {
                       <span>Dashboard</span>
                     </Link>
                     {/* POST JOB LINK */}
-                    <Link
+                    {/* <Link
                       to="/post-job"
                       className="hidden sm:flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors mr-2"
                     >
                       <span>+ Post Job</span>
-                    </Link>
+                    </Link> */}
                   </>
                 )}
 
@@ -107,12 +107,12 @@ const Navbar = () => {
                   {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 animate-in fade-in zoom-in-95 duration-200 z-50">
 
-                      {/* 👇 User Info Header (AB LINK HAI) */}
+                      {/* User Info Header */}
                       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 mb-1 hover:bg-gray-100 transition-colors">
                         <Link
                           to="/profile"
                           className="block"
-                          onClick={() => setIsDropdownOpen(false)} // Click karne par band ho jaye
+                          onClick={() => setIsDropdownOpen(false)} 
                         >
                           <p className="text-sm font-bold text-gray-900 truncate hover:text-blue-600">
                             {auth.user.firstName} {auth.user.lastName}
@@ -125,7 +125,7 @@ const Navbar = () => {
                       <div className="py-1">
                         {auth.user.role === 'STUDENT' && (
                           <Link
-                            to="#"
+                            to="/my-applications"
                             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             onClick={() => setIsDropdownOpen(false)}
                           >
@@ -133,13 +133,12 @@ const Navbar = () => {
                             My Applications
                           </Link>
                         )}
-                        {/* Future settings options here */}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* 3. Logout Button */}
+                {/* Logout Button */}
                 <button
                   onClick={handleLogout}
                   className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors border border-transparent hover:border-red-100"

@@ -51,3 +51,16 @@ export const getJobById = async (id: string) => {
         }
     });
 };
+
+// Get jobs posted by a specific recruiter with application count
+export const getJobsByRecruiter = async (recruiterId: string) => {
+  return await prisma.job.findMany({
+    where: { recruiterId },
+    include: {
+      _count: {
+        select: { apps: true } // to count applications
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });   
+};

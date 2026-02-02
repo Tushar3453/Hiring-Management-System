@@ -26,7 +26,7 @@ export const applyJob = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     // if duplicate application, send 400 Bad Request
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Applied already" });
   }
 };
 

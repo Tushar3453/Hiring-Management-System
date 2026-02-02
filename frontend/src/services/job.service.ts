@@ -35,3 +35,9 @@ export const applyForJob = async (jobId: string) => {
   const response = await api.post('/applications', { jobId });
   return response.data;
 };
+
+// Get Recruiter's Jobs
+export const getMyJobs = async () => {
+  const response = await api.get('/jobs/my-jobs');
+  return response.data;
+};
