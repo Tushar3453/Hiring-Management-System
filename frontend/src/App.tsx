@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import PostJob from './pages/PostJob';
 import MyApplications from './pages/MyApplications';
 import JobApplications from './pages/JobApplications';
+import JobDetails from './pages/JobDetails';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => { 
   const auth = useContext(AuthContext);
@@ -50,6 +51,7 @@ function App() {
           <Route path="/post-job" element={<PostJob />} />
           <Route path="/my-applications" element={<MyApplications />} />
           <Route path="/job/:jobId/applications" element={<JobApplications />} />
+          <Route path="/jobs/:id" element={<JobDetails />} />
         </Routes>
       </div>
     </Router>

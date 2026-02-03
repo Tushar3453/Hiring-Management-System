@@ -1,29 +1,45 @@
 import { useContext, useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import * as JobService from '../services/job.service';
-import { MapPin, IndianRupee, Clock, Briefcase } from 'lucide-react'; 
+import { 
+  MapPin, 
+  IndianRupee, 
+  Briefcase, 
+  Search, 
+  Clock, 
+  Filter 
+} from 'lucide-react'; 
 
 interface Job {
   id: string;
   title: string;
   companyName: string;
   location: string;
-  salary: string;
+  minSalary: number;
+  maxSalary: number;
   description: string;
   jobType: string;
+  createdAt: string;
 }
 
 const StudentDashboard = () => {
   const auth = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Search State
+  const [query, setQuery] = useState(searchParams.get('query') || '');
+  const [location, setLocation] = useState(searchParams.get('location') || '');
+
   const fetchJobs = async () => {
+    setLoading(true);
     try {
-      if (auth?.token) {
-        const data = await JobService.getAllJobs(auth.token);
-        setJobs(data);
-      }
+      const data = await JobService.getAllJobs(query, location);
+      setJobs(data);
     } catch (error) {
       console.error("Error fetching jobs:", error);
     } finally {
@@ -33,83 +49,167 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     fetchJobs();
-  }, [auth?.token]);
+  }, []);
 
-  const handleApply = async (jobId: string) => {
-    if (!confirm("Are you sure you want to apply for this job?")) return;
-    try {
-      if (auth?.token) {
-        await JobService.applyForJob(jobId, auth.token);
-        alert("Applied Successfully! Good Luck 🚀");
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Something went wrong");
-    }
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchJobs();
+  };
+
+  const formatSalary = (min: number, max: number) => {
+    if (!min || !max) return 'Best in Industry';
+    return `₹${(min / 100000).toFixed(1)}L - ₹${(max / 100000).toFixed(1)}L`;
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-      {/* Header Section */}
-      <div className="max-w-7xl mx-auto mb-10 text-center">
-        <h1 className="text-3xl font-bold text-gray-800">Find Your Dream Job</h1>
-        <p className="text-gray-500 mt-1">
-          Welcome back, <span className="font-semibold text-blue-600">{auth?.user?.firstName}</span> 👋. Here are the latest openings for you.
-        </p>
+    <div className="min-h-screen bg-gray-50/50">
+      
+      {/* === HEADER & SEARCH SECTION (CENTERED) === */}
+      <div className="bg-white border-b border-gray-200 pt-12 pb-16 px-4 sm:px-8">
+        <div className="max-w-7xl mx-auto text-center"> {/* Added text-center here */}
+          
+          <div className="mb-10">
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">
+              Find your next <span className="text-blue-600">opportunity</span>
+            </h1>
+            <p className="text-lg text-gray-500">
+              Welcome back, <span className="font-semibold text-gray-900">{auth?.user?.firstName}</span>! 
+              We found <span className="font-semibold text-blue-600">{jobs.length}</span> new jobs for you.
+            </p>
+          </div>
+
+          {/* Centered Search Bar */}
+          <form onSubmit={handleSearch} className="max-w-4xl mx-auto bg-white p-2 rounded-2xl shadow-xl border border-gray-100 flex flex-col md:flex-row gap-2 ring-1 ring-gray-100/50">
+            
+            <div className="flex-1 flex items-center px-4 h-14 bg-gray-50 rounded-xl border border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all text-left">
+              <Search className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
+              <input 
+                type="text" 
+                placeholder="Job title, keywords..." 
+                className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 font-medium"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex-1 flex items-center px-4 h-14 bg-gray-50 rounded-xl border border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all text-left">
+              <MapPin className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
+              <input 
+                type="text" 
+                placeholder="City (e.g. Bangalore)" 
+                className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 font-medium"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              className="h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              Search
+            </button>
+          </form>
+
+        </div>
       </div>
 
-      {/* Jobs Grid */}
-      {loading ? (
-        <div className="text-center py-20 text-gray-500">Loading jobs...</div>
-      ) : (
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {jobs.length > 0 ? (
-            jobs.map((job) => (
-              <div key={job.id} className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{job.title}</h3>
-                      <p className="text-sm font-medium text-blue-600 mb-1">{job.companyName}</p>
-                    </div>
-                    <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
-                      {job.jobType}
-                    </span>
-                  </div>
+      {/* === JOBS GRID SECTION === */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10">
+        
+        {/* Filter Row */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Recommended Jobs</h2>
+          <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm font-medium bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm transition-colors hover:bg-gray-50">
+            <Filter className="w-4 h-4" /> Filters
+          </button>
+        </div>
 
-                  <div className="space-y-2 mb-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" /> {job.location}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <IndianRupee className="w-4 h-4 text-gray-400" /> {job.salary}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-400" /> Posted Recently
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-500 text-sm mb-6 line-clamp-3">
-                    {job.description}
-                  </p>
-                </div>
-
-                <button 
-                  onClick={() => handleApply(job.id)}
-                  className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition active:scale-95"
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             {[1,2,3].map(i => (
+               <div key={i} className="h-64 bg-gray-200 rounded-xl animate-pulse"></div>
+             ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {jobs.length > 0 ? (
+              jobs.map((job) => (
+                <div 
+                  key={job.id} 
+                  className="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full"
                 >
-                  Apply Now
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex gap-4">
+                        <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
+                          {job.companyName.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                            {job.title}
+                          </h3>
+                          <p className="text-sm font-medium text-gray-500">{job.companyName}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-4">
+                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                         <MapPin className="w-3 h-3" /> {job.location}
+                       </span>
+                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                         <IndianRupee className="w-3 h-3" /> {formatSalary(job.minSalary, job.maxSalary)}
+                       </span>
+                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                         <Briefcase className="w-3 h-3" /> {job.jobType || 'Full Time'}
+                       </span>
+                    </div>
+
+                    <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed">
+                      {job.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
+                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {formatTime(job.createdAt)}
+                    </span>
+                    
+                    <button 
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      className="text-sm font-semibold text-blue-600 hover:text-white hover:bg-blue-600 px-5 py-2 rounded-lg transition-all border border-blue-100 hover:border-transparent hover:shadow-md"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center">
+                <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-100">
+                   <Briefcase className="w-10 h-10 text-gray-300" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">No Jobs Found</h3>
+                <p className="text-gray-500 mt-1 max-w-sm mx-auto">
+                  Try adjusting your search criteria.
+                </p>
+                <button 
+                  onClick={() => {setQuery(''); setLocation(''); fetchJobs();}}
+                  className="mt-4 text-blue-600 font-medium hover:underline"
+                >
+                  Clear Filters
                 </button>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-              <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900">No Jobs Found</h3>
-              <p className="text-gray-500">Recruiters haven't posted any jobs yet.</p>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

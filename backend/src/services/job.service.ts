@@ -28,16 +28,31 @@ export const createJob = async (jobData: any, recruiterId: string) => {
     });
 };
 
-// get all jobs
-export const getAllJobs = async () => {
-    return await prisma.job.findMany({
-        orderBy: { createdAt: 'desc' }, // Latest job first
-        include: {
-            recruiter: {
-                select: { firstName: true, lastName: true, email: true } // dont show password
-            }
-        }
-    });
+// get all jobs with search and filter
+export const getAllJobs = async (query?: string, location?: string) => {
+  return await prisma.job.findMany({
+    where: {
+      AND: [
+        // if query is present then search in title and companyName
+        query ? {
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { companyName: { contains: query, mode: 'insensitive' } },
+          ]
+        } : {},
+        // if location is present then search in location
+        location ? {
+          location: { contains: location, mode: 'insensitive' }
+        } : {}
+      ]
+    },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      recruiter: {
+        select: { firstName: true, email: true }
+      }
+    }
+  });
 };
 
 // get job by id

@@ -29,6 +29,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
         skills: true,
         companyName: true,
         designation: true,
+        institutionName: true,
       }
     });
 

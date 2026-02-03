@@ -24,7 +24,8 @@ export const postJob = async (req: Request, res: Response) => {
 // GET All Jobs
 export const getJobs = async (req: Request, res: Response) => {
   try {
-    const jobs = await JobService.getAllJobs();
+    const { query, location } = req.query;
+    const jobs = await JobService.getAllJobs(query as string, location as string);
     res.status(200).json(jobs);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

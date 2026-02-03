@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react'; 
 import * as UserService from '../services/user.service';
+import { AuthContext } from '../context/AuthContext';
 import {
   User, MapPin, Globe, Linkedin, Github,
   Briefcase, GraduationCap, Edit2, Save, X
 } from 'lucide-react';
 
 const Profile = () => {
+  const auth = useContext(AuthContext); // ✅ Auth Context access kiya
   const [profile, setProfile] = useState<UserService.UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -24,6 +26,9 @@ const Profile = () => {
       const data = await UserService.getProfile();
       setProfile(data);
       setFormData(data);
+      
+      // Update global auth state
+      if (auth) auth.updateUser(data);
     } catch (error) {
       console.error("Failed to load profile", error);
     } finally {
@@ -51,7 +56,6 @@ const Profile = () => {
       Object.keys(formData).forEach(key => {
         const value = (formData as any)[key];
         if (value !== null && value !== undefined) {
-          // handle array specific logic for skills
           if (key === 'skills' && Array.isArray(value)) {
             data.append(key, value.join(','));
           } else {
@@ -60,16 +64,21 @@ const Profile = () => {
         }
       });
 
-      // append resume file if selected
       if (resumeFile) {
         data.append('resume', resumeFile);
       }
 
       await UserService.updateProfile(data);
 
-      // refresh profile data
+      // refresh profile data from backend
       const updatedProfile = await UserService.getProfile();
       setProfile(updatedProfile);
+      
+      // Update global auth state
+      if (auth) {
+        auth.updateUser(updatedProfile);
+      }
+
       setIsEditing(false);
       setResumeFile(null);
       alert("Profile Updated Successfully!");
@@ -78,7 +87,7 @@ const Profile = () => {
       alert("Error updating profile");
     }
   };
-  // handle file selection
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setResumeFile(e.target.files[0]);
@@ -103,11 +112,9 @@ const Profile = () => {
               </span>
             </div>
 
-            {/* Name & Role */}
             <h2 className="text-xl font-bold text-gray-900">{profile.firstName} {profile.lastName}</h2>
             <p className="text-sm text-gray-500 font-medium mt-1">{isStudent ? 'Student' : 'Recruiter'}</p>
 
-            {/* Location */}
             <div className="flex items-center justify-center gap-2 mt-4 text-gray-600">
               <MapPin className="w-4 h-4" />
               {isEditing ? (
@@ -124,11 +131,9 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Social Links Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
             <h3 className="font-semibold text-gray-900">Social Links</h3>
 
-            {/* Website */}
             <div className="flex items-center gap-3 text-sm">
               <Globe className="w-4 h-4 text-gray-400" />
               {isEditing ? (
@@ -138,7 +143,6 @@ const Profile = () => {
               ) : <span className="text-gray-400">Not added</span>}
             </div>
 
-            {/* LinkedIn */}
             <div className="flex items-center gap-3 text-sm">
               <Linkedin className="w-4 h-4 text-gray-400" />
               {isEditing ? (
@@ -148,7 +152,6 @@ const Profile = () => {
               ) : <span className="text-gray-400">Not added</span>}
             </div>
 
-            {/* Github (Student Only) */}
             {isStudent && (
               <div className="flex items-center gap-3 text-sm">
                 <Github className="w-4 h-4 text-gray-400" />
@@ -165,10 +168,8 @@ const Profile = () => {
         {/* === RIGHT COLUMN: Details === */}
         <div className="md:col-span-2 space-y-6">
 
-          {/* Main Info Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 relative">
 
-            {/* Header with Edit Button */}
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">About</h1>
@@ -190,10 +191,8 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Fields */}
             <div className="space-y-6">
 
-              {/* Bio */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
                 {isEditing ? (
@@ -210,7 +209,6 @@ const Profile = () => {
                 )}
               </div>
 
-              {/* Work / Education Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {isStudent ? (
                   <div>
@@ -243,7 +241,6 @@ const Profile = () => {
                 )}
               </div>
 
-              {/* Skills Section (Only for Student) */}
               {isStudent && (
                 <div className="pt-4 border-t border-gray-100">
                   <label className="block text-sm font-medium text-gray-700 mb-3">Skills</label>

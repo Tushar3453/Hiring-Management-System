@@ -41,7 +41,7 @@ const PostJob = () => {
       await JobService.postJob(payload);
       
       alert("Job Posted Successfully!");
-      navigate('/dashboard'); // Job post hone ke baad dashboard par bhejo
+      navigate('/recruiter-dashboard'); // Job post hone ke baad dashboard par bhejo
     } catch (error) {
       console.error(error);
       alert("Failed to post job. Please try again.");
