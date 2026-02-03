@@ -59,6 +59,9 @@ model Job {
   minSalary    Int?          
   maxSalary    Int?          
   currency     String        @default("INR")
+
+  jobType         String        @default("Full Time") 
+  experienceLevel String?       
   
   requirements String[]      
   recruiterId  String
