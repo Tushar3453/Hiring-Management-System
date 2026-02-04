@@ -1,6 +1,7 @@
 import { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as JobService from '../services/job.service';
+import * as ApplicationService from '../services/application.service'; 
 import { AuthContext } from '../context/AuthContext';
 import { MapPin, IndianRupee, Briefcase, Building, Clock, CheckCircle2, ArrowLeft } from 'lucide-react';
 
@@ -12,10 +13,17 @@ const JobDetails = () => {
   const [job, setJob] = useState<JobService.JobData | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
 
   useEffect(() => {
-    if (id) fetchJobDetails();
-  }, [id]);
+    if (id) {
+        fetchJobDetails();
+        // if user is logged in then check application status
+        if (auth?.user) {
+            checkApplicationStatus();
+        }
+    }
+  }, [id, auth?.user]); // if id or auth user changes then fetch job details
 
   const fetchJobDetails = async () => {
     try {
@@ -28,6 +36,18 @@ const JobDetails = () => {
     }
   };
 
+  // Check if user has already applied for this job
+  const checkApplicationStatus = async () => {
+    try {
+        const myApps = await ApplicationService.getMyApplications();
+        // Check if any application matches the current job ID
+        const applied = myApps.some((app: any) => app.jobId === id || app.job.id === id);
+        setHasApplied(applied);
+    } catch (error) {
+        console.error("Failed to check application status", error);
+    }
+  };
+
   const handleApply = async () => {
     // Check Login
     if (!auth?.user) {
@@ -36,7 +56,7 @@ const JobDetails = () => {
       return;
     }
 
-    // Check Resume
+    // Check Resume (Only if not already applied)
     if (!auth.user.resumeUrl) {
       const confirmUpload = confirm("You need a resume to apply. Go to profile to upload one?");
       if (confirmUpload) navigate('/profile');
@@ -50,7 +70,8 @@ const JobDetails = () => {
     try {
       await JobService.applyForJob(id!);
       alert("Application Submitted Successfully! 🚀");
-      navigate('/my-applications'); // Redirect to applications page
+      setHasApplied(true); 
+      navigate('/my-applications'); 
     } catch (error: any) {
       alert(error.response?.data?.message || "Something went wrong");
     } finally {
@@ -78,13 +99,20 @@ const JobDetails = () => {
                   <Building className="w-5 h-5" /> {job.companyName}
                 </div>
               </div>
+              
+              {/* Updated Apply Button */}
               <button 
                 onClick={handleApply}
-                disabled={applying}
-                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition active:scale-95 disabled:opacity-50 shadow-md hover:shadow-lg"
+                disabled={applying || hasApplied} 
+                className={`px-8 py-3 rounded-xl font-semibold transition active:scale-95 shadow-md ${
+                    hasApplied 
+                    ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg disabled:opacity-50'
+                }`}
               >
-                {applying ? "Applying..." : "Apply Now"}
+                {hasApplied ? "Already Applied" : applying ? "Applying..." : "Apply Now"}
               </button>
+
             </div>
 
             {/* Tags */}

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as ApplicationService from '../services/application.service.js';
-import { AuthRequest } from '../middlewares/auth.middleware.js'; 
+import { AuthRequest } from '../middlewares/auth.middleware.js';
 
 export const applyJob = async (req: Request, res: Response) => {
   try {
@@ -9,24 +9,27 @@ export const applyJob = async (req: Request, res: Response) => {
     const { jobId } = req.body;
 
     if (!userId) {
-        res.status(401).json({ message: "Unauthorized" });
-        return;
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
-    
+
     if (!jobId) {
-        res.status(400).json({ message: "Job ID is required" });
-        return;
+      res.status(400).json({ message: "Job ID is required" });
+      return;
     }
 
     const application = await ApplicationService.createApplication(userId, jobId);
-    
-    res.status(201).json({ 
-      message: "Applied successfully! Good luck!", 
-      application 
+
+    res.status(201).json({
+      message: "Applied successfully! Good luck!",
+      application
     });
   } catch (error: any) {
-    // if duplicate application, send 400 Bad Request
-    res.status(400).json({ error: "Applied already" });
+    if (error.message === "You have already applied for this job") {
+      res.status(400).json({ message: "You have already applied for this job" });
+    } else {
+      res.status(500).json({ message: error.message || "Internal Server Error" });
+    }
   }
 };
 
@@ -35,8 +38,8 @@ export const getMyApplications = async (req: Request, res: Response) => {
     const userId = (req as AuthRequest).user?.id;
 
     if (!userId) {
-       res.status(401).json({ message: "Unauthorized" });
-       return;
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
 
     const applications = await ApplicationService.getApplicationsByStudent(userId);
