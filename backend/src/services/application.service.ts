@@ -1,45 +1,46 @@
 import { prisma } from '../config/prisma.js';
+import { ApplicationStatus } from '@prisma/client';
 
 export const createApplication = async (userId: string, jobId: string) => {
-    // Check if the user has already applied for this job
-    const existingApplication = await prisma.application.findFirst({
-        where: {
-            studentId: userId,
-            jobId: jobId
-        }
-    });
-
-    if (existingApplication) {
-        throw new Error("You have already applied for this job");
+  // Check if the user has already applied for this job
+  const existingApplication = await prisma.application.findFirst({
+    where: {
+      studentId: userId,
+      jobId: jobId
     }
+  });
 
-    // Create new application
-    return await prisma.application.create({
-        data: {
-            studentId: userId,
-            jobId: jobId,
-            status: 'APPLIED' // Default status
-        }
-    });
+  if (existingApplication) {
+    throw new Error("You have already applied for this job");
+  }
+
+  // Create new application
+  return await prisma.application.create({
+    data: {
+      studentId: userId,
+      jobId: jobId,
+      status: 'APPLIED' // Default status
+    }
+  });
 };
 
 export const getApplicationsByStudent = async (userId: string) => {
-    return await prisma.application.findMany({
-        where: { studentId: userId },
-        include: {
-            job: {
-                select: {
-                    title: true,
-                    location: true,
-                    companyName: true,
-                    recruiter: {
-                        select: { firstName: true, email: true } // Company/Recruiter info
-                    }
-                }
-            }
-        },
-        orderBy: { status: 'asc' } // Sort by status or date
-    });
+  return await prisma.application.findMany({
+    where: { studentId: userId },
+    include: {
+      job: {
+        select: {
+          title: true,
+          location: true,
+          companyName: true,
+          recruiter: {
+            select: { firstName: true, email: true } // Company/Recruiter info
+          }
+        }
+      }
+    },
+    orderBy: { status: 'asc' } // Sort by status or date
+  });
 };
 
 // get applications by job id for recruiter
@@ -48,11 +49,11 @@ export const getApplicationsByJobId = async (jobId: string) => {
     where: { jobId },
     include: {
       student: {
-        select: { 
-          id: true, 
-          firstName: true, 
-          lastName: true, 
-          email: true, 
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
           institutionName: true,
           resumeUrl: true,
           skills: true,
@@ -64,10 +65,60 @@ export const getApplicationsByJobId = async (jobId: string) => {
   });
 };
 
+// get application by id for student
+export const getApplicationById = async (id: string) => {
+  return await prisma.application.findUnique({
+    where: { id }
+  });
+};
+
 // update application status
-export const updateApplicationStatus = async (applicationId: string, status: any) => {
+export const updateApplicationStatus = async (
+  applicationId: string,
+  newStatus: ApplicationStatus,
+  offerDetails?: { salary: string, date: string, note: string }
+) => {
+
+  // Fetch Current Status from DB
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    select: { status: true }
+  });
+
+  if (!application) {
+    throw new Error("Application not found");
+  }
+
+  const currentStatus = application.status;
+
+  // Define The Rule Book (Allowed Transitions)
+  const allowedTransitions: Record<string, string[]> = {
+    'APPLIED': ['SHORTLISTED', 'REJECTED'],
+    'SHORTLISTED': ['INTERVIEW', 'REJECTED'],
+    'INTERVIEW': ['OFFERED', 'REJECTED'],
+    'OFFERED': ['HIRED', 'REJECTED'],
+    'HIRED': [],   // Final Destination
+    'REJECTED': [] // Final Destination
+  };
+
+  // Validation Check
+  // Logic: If status is changing AND the new status is NOT in the allowed list -> ERROR
+  if (currentStatus !== newStatus && !allowedTransitions[currentStatus]?.includes(newStatus)) {
+    throw new Error(`Invalid Move: You cannot go directly from ${currentStatus} to ${newStatus}`);
+  }
+  // Prepare Update Data
+  const updateData: any = { status: newStatus };
+  
+  // Only add details if status is OFFERED
+  if (newStatus === 'OFFERED' && offerDetails) {
+      updateData.offerSalary = offerDetails.salary;
+      updateData.joiningDate = offerDetails.date;
+      updateData.offerNote = offerDetails.note;
+  }
+
+  // Update in DB (Only if validation passes)
   return await prisma.application.update({
     where: { id: applicationId },
-    data: { status }
+    data: updateData
   });
 };

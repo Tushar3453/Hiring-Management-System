@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as ApplicationService from '../services/application.service';
-import { MapPin, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { MapPin, CheckCircle2, XCircle, Clock, Check, X } from 'lucide-react'; // Added Check, X
 
 const MyApplications = () => {
-  const [applications, setApplications] = useState<ApplicationService.Application[]>([]);
+  const [applications, setApplications] = useState<any[]>([]); // Changed type to any for flexibility or use interface
   const [loading, setLoading] = useState(true);
+  
+  // NEW: State to track which offer is being processed (showing spinner)
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchApplications();
@@ -22,14 +25,34 @@ const MyApplications = () => {
     }
   };
 
+  // NEW: Handle Accept/Reject
+  const handleResponse = async (appId: string, action: 'ACCEPT' | 'REJECT') => {
+    if(!confirm(`Are you sure you want to ${action} this offer? This cannot be undone.`)) return;
+
+    setProcessingId(appId);
+    try {
+        // Ensure respondToOffer exists in your application.service.ts
+        await ApplicationService.respondToOffer(appId, action);
+        
+        // Refresh list to show updated status (HIRED/REJECTED)
+        fetchApplications();
+        alert(`Offer ${action === 'ACCEPT' ? 'Accepted' : 'Rejected'} successfully!`);
+    } catch (error: any) {
+        alert(error.response?.data?.message || "Action failed");
+    } finally {
+        setProcessingId(null);
+    }
+  };
+
   // Status Badge Helper
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'HIRED':
+        return <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold"><CheckCircle2 className="w-3 h-3"/> HIRED</span>;
       case 'OFFERED':
-        return <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold"><CheckCircle2 className="w-3 h-3"/> {status}</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold animate-pulse">🎉 OFFER RECEIVED</span>;
       case 'REJECTED':
-        return <span className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold"><XCircle className="w-3 h-3"/> {status}</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold"><XCircle className="w-3 h-3"/> REJECTED</span>;
       case 'SHORTLISTED':
       case 'INTERVIEW':
         return <span className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold"><Clock className="w-3 h-3"/> {status}</span>;
@@ -42,7 +65,7 @@ const MyApplications = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">My Applications</h1>
 
         {applications.length === 0 ? (
@@ -61,6 +84,7 @@ const MyApplications = () => {
                     <th className="px-6 py-4 text-sm font-semibold text-gray-600">Role</th>
                     <th className="px-6 py-4 text-sm font-semibold text-gray-600">Status</th>
                     <th className="px-6 py-4 text-sm font-semibold text-gray-600">Location</th>
+                    <th className="px-6 py-4 text-sm font-semibold text-gray-600">Action</th> {/* Added Action Column */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -84,6 +108,31 @@ const MyApplications = () => {
                           <MapPin className="w-4 h-4" /> {app.job.location}
                         </div>
                       </td>
+                      
+                      {/* ACTION COLUMN */}
+                      <td className="px-6 py-4">
+                        {app.status === 'OFFERED' ? (
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleResponse(app.id, 'ACCEPT')}
+                                    disabled={!!processingId}
+                                    className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-700 transition disabled:opacity-50"
+                                >
+                                    <Check className="w-3 h-3" /> Accept
+                                </button>
+                                <button 
+                                    onClick={() => handleResponse(app.id, 'REJECT')}
+                                    disabled={!!processingId}
+                                    className="flex items-center gap-1 bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-50 transition disabled:opacity-50"
+                                >
+                                    <X className="w-3 h-3" /> Reject
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </td>
+
                     </tr>
                   ))}
                 </tbody>

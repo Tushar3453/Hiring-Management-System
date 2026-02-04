@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { applyJob, getMyApplications, getJobApplications, updateStatus } from '../controllers/application.controller.js';
+import { applyJob, getMyApplications, getJobApplications, updateStatus,studentResponse } from '../controllers/application.controller.js';
 import { authenticateUser } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -12,5 +12,7 @@ router.get('/history', authenticateUser, getMyApplications);
 router.get('/job/:jobId', authenticateUser, getJobApplications);
 //To update application status(Recruiter)
 router.patch('/:id/status', authenticateUser, updateStatus);
+//To respond to offer(Student)
+router.patch('/:id/response', authenticateUser, studentResponse);
 
 export default router;

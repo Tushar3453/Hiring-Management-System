@@ -24,24 +24,24 @@ enum ApplicationStatus {
 }
 
 model User {
-  id        String        @id @default(uuid())
-  email     String        @unique
+  id        String  @id @default(uuid())
+  email     String  @unique
   password  String
-  firstName String? 
+  firstName String?
   lastName  String?
 
-  companyName     String?       // For Recruiter
-  institutionName String?       // For Student
+  companyName     String? // For Recruiter
+  institutionName String? // For Student
 
   // Profile Fields
-  bio             String?
-  location        String?
-  website         String?
-  linkedin        String?
-  github          String?       // For Student
-  resumeUrl       String?       // For Student
-  skills          String[]      
-  designation     String?       // For Recruiter
+  bio         String?
+  location    String?
+  website     String?
+  linkedin    String?
+  github      String? // For Student
+  resumeUrl   String? // For Student
+  skills      String[]
+  designation String? // For Recruiter
 
   role      Role          @default(STUDENT)
   createdAt DateTime      @default(now())
@@ -50,21 +50,21 @@ model User {
 }
 
 model Job {
-  id           String        @id @default(uuid())
-  title        String
-  description  String
-  companyName  String
-  location     String?       @default("Remote") 
-  
-  minSalary    Int?          
-  maxSalary    Int?          
-  currency     String        @default("INR")
+  id          String  @id @default(uuid())
+  title       String
+  description String
+  companyName String
+  location    String? @default("Remote")
 
-  jobType         String        @default("Full Time") 
+  minSalary Int?
+  maxSalary Int?
+  currency  String @default("INR")
+
+  jobType         String  @default("Full Time")
   experienceLevel String?
-  isOpen          Boolean       @default(true) // True = Visible, False = Hidden       
-  
-  requirements String[]      
+  isOpen          Boolean @default(true) // True = Visible, False = Hidden       
+
+  requirements String[]
   recruiterId  String
   recruiter    User          @relation("RecruiterJobs", fields: [recruiterId], references: [id])
   apps         Application[]
@@ -72,10 +72,13 @@ model Job {
 }
 
 model Application {
-  id        String            @id @default(uuid())
-  status    ApplicationStatus @default(APPLIED)
-  studentId String
-  student   User              @relation(fields: [studentId], references: [id])
-  jobId     String
-  job       Job               @relation(fields: [jobId], references: [id])
+  id          String            @id @default(uuid())
+  status      ApplicationStatus @default(APPLIED)
+  offerSalary String?
+  joiningDate String?
+  offerNote   String?
+  studentId   String
+  student     User              @relation(fields: [studentId], references: [id])
+  jobId       String
+  job         Job               @relation(fields: [jobId], references: [id])
 }

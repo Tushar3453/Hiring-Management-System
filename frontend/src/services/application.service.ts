@@ -42,7 +42,15 @@ export const getJobApplications = async (jobId: string) => {
 };
 
 // Recruiter: Update applicant status
-export const updateApplicationStatus = async (id: string, status: string) => {
-  const response = await api.patch(`/applications/${id}/status`, { status });
+export const updateApplicationStatus = async (appId: string, status: string, offerDetails?: any) => {
+  // If offerDetails exists, spread it into the body
+  const payload = { status, ...offerDetails };
+  const response = await api.patch(`/applications/${appId}/status`, payload);
+  return response.data;
+};
+
+// Student: Accept/Reject Offer
+export const respondToOffer = async (applicationId: string, action: 'ACCEPT' | 'REJECT') => {
+  const response = await api.patch(`/applications/${applicationId}/response`, { action });
   return response.data;
 };
