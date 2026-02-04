@@ -54,3 +54,14 @@ export const getMyJobs = async () => {
   const response = await api.get('/jobs/my-jobs');
   return response.data;
 };
+
+// Update Job (Used for Edit and Close/Soft Delete)
+export const updateJob = async (jobId: string, jobData: any) => {
+  const response = await api.put(`/jobs/${jobId}`, jobData);
+  return response.data;
+};
+
+// Helper specifically for closing logic if you want semantic naming
+export const toggleJobStatus = async (jobId: string, currentStatus: boolean) => {
+  return await updateJob(jobId, { isOpen: !currentStatus });
+};

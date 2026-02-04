@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as JobService from '../services/job.service';
-import { Briefcase, MapPin, DollarSign, Building, Save } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, Building, Save, Clock, GraduationCap } from 'lucide-react';
 
 const PostJob = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editJobId = searchParams.get('edit'); // Get Job ID from URL if editing
+
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -15,8 +19,38 @@ const PostJob = () => {
     minSalary: '',
     maxSalary: '',
     currency: 'INR',
-    requirements: '', // String rakhenge, submit karte waqt array banayenge
+    requirements: '', 
+    jobType: 'Full Time',      
+    experienceLevel: 'Fresher' 
   });
+
+  // --- Fetch Data if Editing ---
+  useEffect(() => {
+    if (editJobId) {
+      setFetching(true);
+      JobService.getJobById(editJobId)
+        .then((job: any) => {
+          setFormData({
+            title: job.title,
+            description: job.description,
+            companyName: job.companyName,
+            location: job.location || '',
+            minSalary: job.minSalary || '',
+            maxSalary: job.maxSalary || '',
+            currency: job.currency || 'INR',
+            requirements: job.requirements ? job.requirements.join(', ') : '', // Array to String
+            jobType: job.jobType || 'Full Time',
+            experienceLevel: job.experienceLevel || 'Fresher'
+          });
+        })
+        .catch(err => {
+          console.error("Failed to fetch job details", err);
+          alert("Could not load job details.");
+          navigate('/recruiter-dashboard');
+        })
+        .finally(() => setFetching(false));
+    }
+  }, [editJobId, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -27,7 +61,7 @@ const PostJob = () => {
     setLoading(true);
 
     try {
-      // Requirements string ko array mein convert karna (comma ya new line se)
+      // Format Requirements
       const formattedRequirements = formData.requirements
         .split(',')
         .map(req => req.trim())
@@ -38,17 +72,26 @@ const PostJob = () => {
         requirements: formattedRequirements,
       };
 
-      await JobService.postJob(payload);
+      if (editJobId) {
+        // --- UPDATE MODE ---
+        await JobService.updateJob(editJobId, payload);
+        alert("Job Updated Successfully!");
+      } else {
+        // --- CREATE MODE ---
+        await JobService.postJob(payload);
+        alert("Job Posted Successfully!");
+      }
       
-      alert("Job Posted Successfully!");
-      navigate('/recruiter-dashboard'); // Job post hone ke baad dashboard par bhejo
+      navigate('/recruiter-dashboard');
     } catch (error) {
       console.error(error);
-      alert("Failed to post job. Please try again.");
+      alert("Failed to save job. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) return <div className="text-center py-20">Loading Job Details...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -56,8 +99,12 @@ const PostJob = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Post a New Job</h1>
-            <p className="text-gray-500 mt-1">Find the best talent for your company</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {editJobId ? 'Edit Job Posting' : 'Post a New Job'}
+            </h1>
+            <p className="text-gray-500 mt-1">
+              {editJobId ? 'Update the details below' : 'Find the best talent for your company'}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -105,6 +152,45 @@ const PostJob = () => {
                     onChange={handleChange}
                     className="pl-10 w-full border border-gray-300 rounded-lg p-2.5"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Job Type & Experience Level */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <select
+                    name="jobType"
+                    value={formData.jobType}
+                    onChange={handleChange}
+                    className="pl-10 w-full border border-gray-300 rounded-lg p-2.5 bg-white"
+                  >
+                    <option value="Full Time">Full Time</option>
+                    <option value="Part Time">Part Time</option>
+                    <option value="Internship">Internship</option>
+                    <option value="Contract">Contract</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Experience Level</label>
+                <div className="relative">
+                  <GraduationCap className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <select
+                    name="experienceLevel"
+                    value={formData.experienceLevel}
+                    onChange={handleChange}
+                    className="pl-10 w-full border border-gray-300 rounded-lg p-2.5 bg-white"
+                  >
+                    <option value="Fresher">Fresher</option>
+                    <option value="0-1 Years">0-1 Years</option>
+                    <option value="1-3 Years">1-3 Years</option>
+                    <option value="3-5 Years">3-5 Years</option>
+                    <option value="5+ Years">5+ Years</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -162,7 +248,7 @@ const PostJob = () => {
               <textarea
                 name="description"
                 required
-                rows={4}
+                rows={5}
                 placeholder="Describe the role and responsibilities..."
                 value={formData.description}
                 onChange={handleChange}
@@ -191,7 +277,10 @@ const PostJob = () => {
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50"
               >
-                {loading ? 'Posting...' : <><Save className="w-5 h-5" /> Post Job</>}
+                {loading 
+                  ? 'Saving...' 
+                  : (editJobId ? <><Save className="w-5 h-5" /> Update Job</> : <><Save className="w-5 h-5" /> Post Job</>)
+                }
               </button>
             </div>
 

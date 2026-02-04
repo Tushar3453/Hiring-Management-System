@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateUser, authorizeRecruiter } from '../middlewares/auth.middleware.js';
-import { postJob, getJobs, getSingleJob, getMyJobs } from '../controllers/job.controller.js'; 
+import { postJob, getJobs, getSingleJob, getMyJobs, updateJob } from '../controllers/job.controller.js'; 
 
 const router = Router();
 
@@ -15,5 +15,8 @@ router.get('/my-jobs', authenticateUser, authorizeRecruiter, getMyJobs);
 
 // GET Single Job
 router.get('/:id', getSingleJob);
+
+// Update Job
+router.put('/:id', authenticateUser, authorizeRecruiter, updateJob);
 
 export default router;

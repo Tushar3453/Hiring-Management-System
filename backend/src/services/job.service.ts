@@ -35,6 +35,7 @@ export const getAllJobs = async (query?: string, location?: string, jobType?: st
     return await prisma.job.findMany({
         where: {
             AND: [
+                { isOpen: true },
                 // if query is present then search in title and companyName
                 query ? {
                     OR: [
@@ -85,5 +86,23 @@ export const getJobsByRecruiter = async (recruiterId: string) => {
             }
         },
         orderBy: { createdAt: 'desc' }
+    });
+};
+
+// EDIT & CLOSE JOB
+export const updateJob = async (jobId: string, recruiterId: string, updateData: any) => {
+    // Check if job exists
+    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    if (!job) throw new Error("Job not found");
+
+    // Security Check
+    if (job.recruiterId !== recruiterId) {
+        throw new Error("Unauthorized: You can only edit your own jobs");
+    }
+
+    // Update Job
+    return await prisma.job.update({
+        where: { id: jobId },
+        data: updateData // send isOpen: false to close the job
     });
 };

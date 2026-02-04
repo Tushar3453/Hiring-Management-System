@@ -61,7 +61,8 @@ model Job {
   currency     String        @default("INR")
 
   jobType         String        @default("Full Time") 
-  experienceLevel String?       
+  experienceLevel String?
+  isOpen          Boolean       @default(true) // True = Visible, False = Hidden       
   
   requirements String[]      
   recruiterId  String
