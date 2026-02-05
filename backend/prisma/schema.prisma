@@ -33,8 +33,6 @@ model User {
   companyName     String? // For Recruiter
   institutionName String? // For Student
 
-  
-
   // Profile Fields
   bio         String?
   location    String?
@@ -46,10 +44,11 @@ model User {
   skills      String[]
   designation String? // For Recruiter
 
-  role      Role          @default(STUDENT)
-  createdAt DateTime      @default(now())
-  jobs      Job[]         @relation("RecruiterJobs") // for recruiter (RecruiterJobs is the name of the relation)
-  apps      Application[] //for student
+  role          Role           @default(STUDENT)
+  createdAt     DateTime       @default(now())
+  jobs          Job[]          @relation("RecruiterJobs") // for recruiter (RecruiterJobs is the name of the relation)
+  apps          Application[] //for student
+  notifications Notification[]
 }
 
 model Job {
@@ -75,18 +74,30 @@ model Job {
 }
 
 model Application {
-  id          String            @id @default(uuid())
-  status      ApplicationStatus @default(APPLIED)
-  offerSalary String?
-  joiningDate String?
-  offerNote   String?
-  studentId   String
-  student     User              @relation(fields: [studentId], references: [id])
-  jobId       String
-  job         Job               @relation(fields: [jobId], references: [id])
-  resumeUrl     String    // Mandatory for application (Snapshot)
-  atsScore      Int?      // 0 - 100
-  missingSkills String[]  // List of missing keyword
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String            @id @default(uuid())
+  status        ApplicationStatus @default(APPLIED)
+  offerSalary   String?
+  joiningDate   String?
+  offerNote     String?
+  studentId     String
+  student       User              @relation(fields: [studentId], references: [id])
+  jobId         String
+  job           Job               @relation(fields: [jobId], references: [id])
+  resumeUrl     String // Mandatory for application (Snapshot)
+  atsScore      Int? // 0 - 100
+  missingSkills String[] // List of missing keyword
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(uuid()) 
+  
+  recipientId String   
+  recipient   User     @relation(fields: [recipientId], references: [id])
+  
+  message     String
+  type        String   @default("info")
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
 }

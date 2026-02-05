@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js'; 
 import { ApplicationStatus } from '@prisma/client';
 import { calculateATSScore } from '../utils/ats.js'; 
+import { sendNotification } from './notification.service.js'; 
 
 export const createApplication = async (userId: string, jobId: string) => {
   
@@ -8,11 +9,11 @@ export const createApplication = async (userId: string, jobId: string) => {
   const [student, job] = await Promise.all([
     prisma.user.findUnique({ 
       where: { id: userId },
-      select: { resumeUrl: true, resumeText: true } // Fetch Text too!
+      select: { firstName: true, lastName: true, resumeUrl: true, resumeText: true } 
     }),
     prisma.job.findUnique({
       where: { id: jobId },
-      select: { requirements: true, title: true } // Fetch Skills
+      select: { requirements: true, title: true, recruiterId: true } 
     })
   ]);
 
@@ -34,24 +35,31 @@ export const createApplication = async (userId: string, jobId: string) => {
   }
 
   // EXECUTE ATS LOGIC 
-  // We compare the Student's Stored Text vs Job Requirements
   const atsResult = calculateATSScore(student.resumeText || "", job.requirements);
-  
   console.log(`📊 ATS Score: ${atsResult.score}% for Job: ${job.title}`);
 
-  // Create Application with Snapshot Data
-  return await prisma.application.create({
+  // Create Application
+  const newApplication = await prisma.application.create({
     data: {
       studentId: userId,
       jobId: jobId,
       status: 'APPLIED',
-      
-      // Snapshot Data
       resumeUrl: student.resumeUrl,
       atsScore: atsResult.score,        
       missingSkills: atsResult.missingSkills 
     }
   });
+
+  // NOTIFICATION TRIGGER (To Recruiter)
+  if (job.recruiterId) {
+    await sendNotification(
+        job.recruiterId,
+        `New Applicant: ${student.firstName} ${student.lastName} has applied for ${job.title}.`,
+        'info'
+    );
+  }
+
+  return newApplication;
 };
 
 export const getApplicationsByStudent = async (userId: string) => {
@@ -64,12 +72,12 @@ export const getApplicationsByStudent = async (userId: string) => {
           location: true,
           companyName: true,
           recruiter: {
-            select: { firstName: true, email: true } // Company/Recruiter info
+            select: { firstName: true, email: true } 
           }
         }
       }
     },
-    orderBy: { status: 'asc' } // Sort by status or date
+    orderBy: { createdAt: 'desc' } // newest apply is first
   });
 };
 
@@ -91,11 +99,11 @@ export const getApplicationsByJobId = async (jobId: string) => {
           location: true
         }
       }
-    }
+    },
+    orderBy: { atsScore: 'desc' } // Show highest score candidates first
   });
 };
 
-// get application by id for student
 export const getApplicationById = async (id: string) => {
   return await prisma.application.findUnique({
     where: { id }
@@ -109,10 +117,16 @@ export const updateApplicationStatus = async (
   offerDetails?: { salary: string, date: string, note: string }
 ) => {
 
-  // Fetch Current Status from DB
+  // Fetch Current Status + Job Details for Notification
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
-    select: { status: true }
+    select: { 
+        status: true,
+        studentId: true, // Needed for notification
+        job: {
+            select: { title: true, companyName: true } // Needed for notification message
+        }
+    }
   });
 
   if (!application) {
@@ -121,17 +135,16 @@ export const updateApplicationStatus = async (
 
   const currentStatus = application.status;
 
-  // Define The Rule Book (Allowed Transitions)
+  // Rule Book
   const allowedTransitions: Record<string, string[]> = {
     'APPLIED': ['SHORTLISTED', 'REJECTED'],
     'SHORTLISTED': ['INTERVIEW', 'REJECTED'],
     'INTERVIEW': ['OFFERED', 'REJECTED'],
     'OFFERED': ['HIRED', 'REJECTED'],
-    'HIRED': [],   // Final Destination
-    'REJECTED': [] // Final Destination
+    'HIRED': [],   
+    'REJECTED': [] 
   };
 
-  // Validation Check
   if (currentStatus !== newStatus && !allowedTransitions[currentStatus]?.includes(newStatus)) {
     throw new Error(`Invalid Move: You cannot go directly from ${currentStatus} to ${newStatus}`);
   }
@@ -139,16 +152,27 @@ export const updateApplicationStatus = async (
   // Prepare Update Data
   const updateData: any = { status: newStatus };
   
-  // Only add details if status is OFFERED
   if (newStatus === 'OFFERED' && offerDetails) {
       updateData.offerSalary = offerDetails.salary;
       updateData.joiningDate = offerDetails.date;
       updateData.offerNote = offerDetails.note;
   }
 
-  // Update in DB (Only if validation passes)
-  return await prisma.application.update({
+  // Update in DB
+  const updatedApp = await prisma.application.update({
     where: { id: applicationId },
     data: updateData
   });
+
+  // NOTIFICATION TRIGGER (To Student)
+  // determine type: Rejected = error (red), Hired/Offered = success (green), others = info (blue)
+  let notifType: 'info' | 'success' | 'error' = 'info';
+  if (newStatus === 'REJECTED') notifType = 'error';
+  if (['OFFERED', 'HIRED'].includes(newStatus)) notifType = 'success';
+
+  const message = `Update: Your application for ${application.job.title} at ${application.job.companyName} is now ${newStatus}.`;
+
+  await sendNotification(application.studentId, message, notifType);
+
+  return updatedApp;
 };

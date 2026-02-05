@@ -2,8 +2,9 @@ import { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as JobService from '../services/job.service';
 import * as ApplicationService from '../services/application.service'; 
+import axios from 'axios'; 
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, IndianRupee, Briefcase, Building, Clock, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { MapPin, IndianRupee, Briefcase, Building, Clock, CheckCircle2, ArrowLeft, Ban, FileText } from 'lucide-react';
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -14,16 +15,45 @@ const JobDetails = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  
+  // ✅ NEW: Specific state to track if resume exists (trusting Server over Context)
+  const [hasResume, setHasResume] = useState(false);
+
+  const isRecruiter = auth?.user?.role === 'RECRUITER';
 
   useEffect(() => {
     if (id) {
         fetchJobDetails();
-        // if user is logged in then check application status
-        if (auth?.user) {
+        if (auth?.user && !isRecruiter) {
             checkApplicationStatus();
+            verifyResumeStatus(); // Check the server for the latest resume status
         }
     }
-  }, [id, auth?.user]); // if id or auth user changes then fetch job details
+  }, [id, auth?.user]); 
+
+  // Double-check with server
+  const verifyResumeStatus = async () => {
+    try {
+        // First, trust the context if it says yes
+        if (auth?.user?.resumeUrl) {
+            setHasResume(true);
+            return;
+        }
+
+        // If context says no, ask the server (in case user just uploaded it)
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/user/profile', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data && response.data.resumeUrl) {
+            setHasResume(true);
+            console.log("Resume found on server (Context was stale)");
+        }
+    } catch (error) {
+        console.error("Failed to verify resume status", error);
+    }
+  };
 
   const fetchJobDetails = async () => {
     try {
@@ -36,11 +66,9 @@ const JobDetails = () => {
     }
   };
 
-  // Check if user has already applied for this job
   const checkApplicationStatus = async () => {
     try {
         const myApps = await ApplicationService.getMyApplications();
-        // Check if any application matches the current job ID
         const applied = myApps.some((app: any) => app.jobId === id || app.job.id === id);
         setHasApplied(applied);
     } catch (error) {
@@ -49,21 +77,19 @@ const JobDetails = () => {
   };
 
   const handleApply = async () => {
-    // Check Login
     if (!auth?.user) {
       alert("Please login to apply!");
       navigate('/login');
       return;
     }
 
-    // Check Resume (Only if not already applied)
-    if (!auth.user.resumeUrl) {
+    if (isRecruiter) return;
+    if (!hasResume) {
       const confirmUpload = confirm("You need a resume to apply. Go to profile to upload one?");
       if (confirmUpload) navigate('/profile');
       return;
     }
 
-    // Apply
     if (!confirm(`Apply for ${job?.title} at ${job?.companyName}?`)) return;
 
     setApplying(true);
@@ -100,17 +126,26 @@ const JobDetails = () => {
                 </div>
               </div>
               
-              {/* Updated Apply Button */}
               <button 
                 onClick={handleApply}
-                disabled={applying || hasApplied} 
-                className={`px-8 py-3 rounded-xl font-semibold transition active:scale-95 shadow-md ${
-                    hasApplied 
-                    ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
-                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg disabled:opacity-50'
+                disabled={applying || hasApplied || isRecruiter} 
+                className={`px-8 py-3 rounded-xl font-semibold transition shadow-md flex items-center gap-2 ${
+                    isRecruiter 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none' 
+                    : hasApplied 
+                        ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95 disabled:opacity-50'
                 }`}
               >
-                {hasApplied ? "Already Applied" : applying ? "Applying..." : "Apply Now"}
+                {isRecruiter ? (
+                    <> <Ban className="w-4 h-4"/> Recruiters Cannot Apply </>
+                ) : hasApplied ? (
+                    "Already Applied"
+                ) : applying ? (
+                    "Applying..."
+                ) : (
+                    <> <FileText className="w-4 h-4"/> Apply Now </>
+                )}
               </button>
 
             </div>

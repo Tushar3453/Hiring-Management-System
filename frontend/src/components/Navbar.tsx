@@ -2,6 +2,7 @@ import { useState, useContext, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LogOut, GraduationCap, Building, Briefcase, FileText, ChevronDown } from 'lucide-react';
+import NotificationBell from './NotificationBell'; // ✅ Already imported
 
 const Navbar = () => {
   const auth = useContext(AuthContext);
@@ -67,23 +68,17 @@ const Navbar = () => {
                     <span>Find Jobs</span>
                   </Link>
                 ) : (
-                  <>
-                    <Link
-                      to="/recruiter-dashboard"
-                      className="hidden sm:flex items-center gap-2 text-gray-600 hover:text-blue-600 font-medium transition-colors mr-2"
-                    >
-                      <Briefcase className="w-4 h-4" />
-                      <span>Dashboard</span>
-                    </Link>
-                    {/* POST JOB LINK */}
-                    {/* <Link
-                      to="/post-job"
-                      className="hidden sm:flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors mr-2"
-                    >
-                      <span>+ Post Job</span>
-                    </Link> */}
-                  </>
+                  <Link
+                    to="/recruiter-dashboard"
+                    className="hidden sm:flex items-center gap-2 text-gray-600 hover:text-blue-600 font-medium transition-colors mr-2"
+                  >
+                    <Briefcase className="w-4 h-4" />
+                    <span>Dashboard</span>
+                  </Link>
                 )}
+
+                {/* ✅ ADDED: Notification Bell here */}
+                <NotificationBell />
 
                 {/* Profile Dropdown  */}
                 <div className="relative" ref={dropdownRef}>

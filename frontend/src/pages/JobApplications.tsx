@@ -4,7 +4,7 @@ import * as ApplicationService from '../services/application.service';
 import * as JobService from '../services/job.service'; 
 import { 
   FileText, Mail, GraduationCap, Save, ArrowLeft, Building, MapPin, X, CheckCircle2, Clock, ChevronDown, 
-  BrainCircuit, AlertCircle 
+  BrainCircuit, AlertCircle, IndianRupee 
 } from 'lucide-react';
 
 interface OfferFormData {
@@ -120,7 +120,10 @@ const JobApplications = () => {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
                 <div className="flex flex-wrap items-center gap-4 text-gray-500 text-sm">
                   <span className="flex items-center gap-1.5"><Building className="w-4 h-4" /> {job.companyName}</span>
-                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {job.location}</span>
+                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {job.location}</span>  
+                  <span className="flex items-center gap-1.5 font-medium text-gray-700">
+                    <IndianRupee className="w-4 h-4" /> {job.minSalary} - {job.maxSalary} {job.currency}
+                  </span>
                   <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium text-xs border border-blue-100">
                     {job.jobType || 'Full Time'}
                   </span>
@@ -173,14 +176,12 @@ const JobApplications = () => {
                   {/* BOTTOM ROW: Resume + ATS Score */}
                   <div className="mt-5 flex flex-wrap items-center gap-4">
                     
-                    {/*  Resume Button */}
                     {app.student.resumeUrl && (
                       <a href={app.student.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
                         <FileText className="w-4 h-4" /> View Resume
                       </a>
                     )}
 
-                    {/* ATS SCORE BADGE */}
                     {app.atsScore !== undefined && app.atsScore !== null && (
                       <div className="relative group cursor-help">
                         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)}`}>
@@ -188,7 +189,6 @@ const JobApplications = () => {
                             <span className="font-bold text-sm">{app.atsScore}% Match</span>
                         </div>
                         
-                        {/* Tooltip for Missing Skills */}
                         {app.missingSkills && app.missingSkills.length > 0 && (
                              <div className="absolute left-0 bottom-full mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                 <div className="font-bold mb-1 flex items-center gap-1 text-gray-300">
@@ -199,7 +199,6 @@ const JobApplications = () => {
                                         <span key={skill} className="bg-gray-700 px-1.5 py-0.5 rounded text-[10px]">{skill}</span>
                                     ))}
                                 </div>
-                                {/* Tooltip Arrow */}
                                 <div className="absolute left-4 top-full w-2 h-2 bg-gray-900 rotate-45"></div>
                              </div>
                         )}
@@ -243,7 +242,6 @@ const JobApplications = () => {
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                              </div>
                              
-                             {/* Save Button */}
                              <button
                                 onClick={() => handleSaveClick(app.id, app.status)}
                                 disabled={updatingIds.has(app.id) || app.confirmedStatus === 'REJECTED'}
@@ -259,7 +257,6 @@ const JobApplications = () => {
                         </div>
                     )}
                     
-                    {/* Helper Text */}
                     {app.confirmedStatus === 'REJECTED' && (
                         <p className="text-center text-[10px] text-red-400 mt-2 font-medium">Application Rejected</p>
                     )}
@@ -287,10 +284,15 @@ const JobApplications = () => {
 
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Salary (CTC)</label>
+                        <div className="flex justify-between items-center mb-1.5">
+                            <label className="block text-xs font-bold text-gray-500 uppercase">Salary (CTC)</label>
+                            <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                Budget: {job?.minSalary} - {job?.maxSalary} {job?.currency}
+                            </span>
+                        </div>
                         <input 
                             className="w-full border border-gray-300 rounded-lg p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition" 
-                            placeholder="e.g. 12 LPA"
+                            placeholder={`e.g. ${job?.maxSalary} LPA`}
                             value={offerForm.salary}
                             onChange={(e) => setOfferForm({...offerForm, salary: e.target.value})}
                         />
