@@ -33,6 +33,8 @@ model User {
   companyName     String? // For Recruiter
   institutionName String? // For Student
 
+  
+
   // Profile Fields
   bio         String?
   location    String?
@@ -40,6 +42,7 @@ model User {
   linkedin    String?
   github      String? // For Student
   resumeUrl   String? // For Student
+  resumeText  String?  @db.Text // Store raw text here to avoid re-parsing
   skills      String[]
   designation String? // For Recruiter
 
@@ -81,4 +84,9 @@ model Application {
   student     User              @relation(fields: [studentId], references: [id])
   jobId       String
   job         Job               @relation(fields: [jobId], references: [id])
+  resumeUrl     String    // Mandatory for application (Snapshot)
+  atsScore      Int?      // 0 - 100
+  missingSkills String[]  // List of missing keyword
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

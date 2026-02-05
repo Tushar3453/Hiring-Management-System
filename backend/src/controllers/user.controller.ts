@@ -3,13 +3,13 @@ import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middlewares/auth.middleware.js';
 import cloudinary from '../config/cloudinary.js';
 import fs from 'fs';
+import { parseResume } from '../utils/ats.js'; 
 
 const prisma = new PrismaClient();
 
 // Get Profile (Current User)
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
-    // user id from auth middleware
     const userId = (req as AuthRequest).user?.id;
 
     const user = await prisma.user.findUnique({
@@ -55,21 +55,44 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       firstName, lastName
     } = req.body;
 
-    let resumeUrl = undefined;
+    let resumeUrl: string | undefined = undefined;
+    let resumeText: string | undefined = undefined;
 
-    // check if a file is uploaded
     if (req.file) {
-      // upload file to cloudinary
-      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: "resumes",
-        resource_type: "auto"
-      });
+      console.log("Processing Resume Upload...");
       
-      // secure link
-      resumeUrl = uploadResult.secure_url;
+      try {
+        const filePath = req.file.path;
+        
+        // Since we are using diskStorage, we must read the file into a buffer for pdf-parse
+        const fileBuffer = fs.readFileSync(filePath); 
 
-      // remove file from local server after upload
-      fs.unlinkSync(req.file.path);
+        // Run Upload and Parsing in Parallel
+        const [uploadResult, parsedText] = await Promise.all([
+          cloudinary.uploader.upload(filePath, {
+            folder: "resumes",
+            resource_type: "auto"
+          }),
+          parseResume(fileBuffer) // Extract text using buffer
+        ]);
+        
+        resumeUrl = uploadResult.secure_url;
+        resumeText = parsedText;
+
+        console.log("Resume Parsed. Text Length:", resumeText.length);
+
+        // Remove file from local server after processing
+        fs.unlinkSync(filePath);
+
+      } catch (err) {
+        console.error("Resume processing failed:", err);
+        // Clean up file if it exists and error occurred
+        if (req.file && fs.existsSync(req.file.path)) {
+           fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ message: "Failed to process resume file" });
+        return;
+      }
     }
 
     // handle skills if it comes as a string from form data
@@ -92,7 +115,8 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         companyName,
         designation,
         institutionName,
-        ...(resumeUrl && { resumeUrl }) // only update if new resume exists
+        ...(resumeUrl && { resumeUrl }), // Update URL if new file
+        ...(resumeText && { resumeText }) // Update Text if new file
       }
     });
 

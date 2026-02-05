@@ -3,17 +3,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import * as ApplicationService from '../services/application.service';
 import * as JobService from '../services/job.service'; 
 import { 
-  FileText, Mail, GraduationCap, Save, ArrowLeft, Building, MapPin, X, CheckCircle2, Clock, ChevronDown
+  FileText, Mail, GraduationCap, Save, ArrowLeft, Building, MapPin, X, CheckCircle2, Clock, ChevronDown, 
+  BrainCircuit, AlertCircle 
 } from 'lucide-react';
 
 interface OfferFormData {
-    salary: string;
-    date: string;
-    note: string;
+  salary: string;
+  date: string;
+  note: string;
 }
 
 interface ExtendedApplicant extends ApplicationService.Applicant {
-    confirmedStatus: string; 
+  confirmedStatus: string; 
+  atsScore?: number;        
+  missingSkills?: string[]; 
 }
 
 const JobApplications = () => {
@@ -77,7 +80,7 @@ const JobApplications = () => {
       await ApplicationService.updateApplicationStatus(appId, status, offerDetails);
       alert("Updated Successfully!");
       setIsModalOpen(false);
-      fetchData(); // Refresh data to update badges from DB
+      fetchData(); 
     } catch (error: any) {
       alert(error.response?.data?.message || "Failed to update");
       fetchData();
@@ -88,6 +91,12 @@ const JobApplications = () => {
         return newSet;
       });
     }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 75) return 'bg-green-50 text-green-700 border-green-200';
+    if (score >= 40) return 'bg-orange-50 text-orange-700 border-orange-200';
+    return 'bg-red-50 text-red-700 border-red-200';
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center text-gray-500">Loading Data...</div>;
@@ -161,14 +170,42 @@ const JobApplications = () => {
                       </div>
                   )}
 
-                  {/* Resume Action */}
-                  {app.student.resumeUrl && (
-                    <div className="mt-5">
+                  {/* BOTTOM ROW: Resume + ATS Score */}
+                  <div className="mt-5 flex flex-wrap items-center gap-4">
+                    
+                    {/*  Resume Button */}
+                    {app.student.resumeUrl && (
                       <a href={app.student.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
                         <FileText className="w-4 h-4" /> View Resume
                       </a>
-                    </div>
-                  )}
+                    )}
+
+                    {/* ATS SCORE BADGE */}
+                    {app.atsScore !== undefined && app.atsScore !== null && (
+                      <div className="relative group cursor-help">
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)}`}>
+                            <BrainCircuit className="w-4 h-4" />
+                            <span className="font-bold text-sm">{app.atsScore}% Match</span>
+                        </div>
+                        
+                        {/* Tooltip for Missing Skills */}
+                        {app.missingSkills && app.missingSkills.length > 0 && (
+                             <div className="absolute left-0 bottom-full mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <div className="font-bold mb-1 flex items-center gap-1 text-gray-300">
+                                    <AlertCircle className="w-3 h-3" /> Missing Keywords:
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                    {app.missingSkills.map(skill => (
+                                        <span key={skill} className="bg-gray-700 px-1.5 py-0.5 rounded text-[10px]">{skill}</span>
+                                    ))}
+                                </div>
+                                {/* Tooltip Arrow */}
+                                <div className="absolute left-4 top-full w-2 h-2 bg-gray-900 rotate-45"></div>
+                             </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Action Section */}
