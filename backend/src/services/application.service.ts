@@ -3,6 +3,7 @@ import { ApplicationStatus } from '@prisma/client';
 import { calculateATSScore } from '../utils/ats.js'; 
 import { sendNotification } from './notification.service.js'; 
 
+// Create Application (Student applies)
 export const createApplication = async (userId: string, jobId: string) => {
   
   // Parallel Fetch: Get Student Data AND Job Data
@@ -49,19 +50,11 @@ export const createApplication = async (userId: string, jobId: string) => {
       missingSkills: atsResult.missingSkills 
     }
   });
-
-  // NOTIFICATION TRIGGER (To Recruiter)
-  if (job.recruiterId) {
-    await sendNotification(
-        job.recruiterId,
-        `New Applicant: ${student.firstName} ${student.lastName} has applied for ${job.title}.`,
-        'info'
-    );
-  }
-
+  
   return newApplication;
 };
 
+// Get Student's History
 export const getApplicationsByStudent = async (userId: string) => {
   return await prisma.application.findMany({
     where: { studentId: userId },
@@ -77,11 +70,11 @@ export const getApplicationsByStudent = async (userId: string) => {
         }
       }
     },
-    orderBy: { createdAt: 'desc' } // newest apply is first
+    orderBy: { createdAt: 'desc' } 
   });
 };
 
-// get applications by job id for recruiter
+// Get Job Applicants (Recruiter View)
 export const getApplicationsByJobId = async (jobId: string) => {
   return await prisma.application.findMany({
     where: { jobId },
@@ -100,17 +93,22 @@ export const getApplicationsByJobId = async (jobId: string) => {
         }
       }
     },
-    orderBy: { atsScore: 'desc' } // Show highest score candidates first
+    orderBy: { atsScore: 'desc' } // Show highest score first
   });
 };
 
+// Get Single App
 export const getApplicationById = async (id: string) => {
   return await prisma.application.findUnique({
-    where: { id }
+    where: { id },
+    include: {
+      job: { select: { title: true, companyName: true, recruiterId: true } },
+      student: { select: { firstName: true, lastName: true } }
+    }
   });
 };
 
-// update application status
+// UPDATE STATUS 
 export const updateApplicationStatus = async (
   applicationId: string,
   newStatus: ApplicationStatus,
@@ -122,9 +120,9 @@ export const updateApplicationStatus = async (
     where: { id: applicationId },
     select: { 
         status: true,
-        studentId: true, // Needed for notification
+        studentId: true, 
         job: {
-            select: { title: true, companyName: true } // Needed for notification message
+            select: { title: true, companyName: true } 
         }
     }
   });
@@ -135,7 +133,12 @@ export const updateApplicationStatus = async (
 
   const currentStatus = application.status;
 
-  // Rule Book
+  // Prevent Duplicate Updates
+  if (currentStatus === newStatus) {
+    throw new Error(`Candidate is already marked as ${newStatus}. No changes made.`);
+  }
+
+  // Rule Book for Transitions
   const allowedTransitions: Record<string, string[]> = {
     'APPLIED': ['SHORTLISTED', 'REJECTED'],
     'SHORTLISTED': ['INTERVIEW', 'REJECTED'],
@@ -145,8 +148,8 @@ export const updateApplicationStatus = async (
     'REJECTED': [] 
   };
 
-  if (currentStatus !== newStatus && !allowedTransitions[currentStatus]?.includes(newStatus)) {
-    throw new Error(`Invalid Move: You cannot go directly from ${currentStatus} to ${newStatus}`);
+  if (allowedTransitions[currentStatus] && !allowedTransitions[currentStatus].includes(newStatus)) {
+     throw new Error(`Invalid Move: You cannot go directly from ${currentStatus} to ${newStatus}`);
   }
 
   // Prepare Update Data
@@ -164,15 +167,103 @@ export const updateApplicationStatus = async (
     data: updateData
   });
 
-  // NOTIFICATION TRIGGER (To Student)
-  // determine type: Rejected = error (red), Hired/Offered = success (green), others = info (blue)
-  let notifType: 'info' | 'success' | 'error' = 'info';
-  if (newStatus === 'REJECTED') notifType = 'error';
-  if (['OFFERED', 'HIRED'].includes(newStatus)) notifType = 'success';
+  // Custom Notification Messages & Types
+  let message = "";
+  let notifType: 'info' | 'success' | 'warning' | 'error' = 'info';
 
-  const message = `Update: Your application for ${application.job.title} at ${application.job.companyName} is now ${newStatus}.`;
+  const jobTitle = application.job.title;
+  const company = application.job.companyName;
 
+  switch (newStatus) {
+    case 'SHORTLISTED':
+      message = `🎉 Congratulations! You have been SHORTLISTED for ${jobTitle} at ${company}.`;
+      notifType = 'success';
+      break;
+
+    case 'INTERVIEW':
+      message = `📅 Good News! You have been invited for an INTERVIEW for ${jobTitle} at ${company}. Check your email/dashboard for details.`;
+      notifType = 'info'; // Blue
+      break;
+
+    case 'OFFERED':
+      message = `🚀 Incredible! You have received an OFFER for the position of ${jobTitle} at ${company}!`;
+      notifType = 'success'; // Green
+      break;
+
+    case 'REJECTED':
+      message = `Update on your application for ${jobTitle} at ${company}. Unfortunately, the team has decided not to proceed.`;
+      notifType = 'error'; // Red
+      break;
+
+    case 'HIRED':
+      message = `🎊 You are officially HIRED for ${jobTitle}! Welcome to the team.`;
+      notifType = 'success';
+      break;
+
+    default:
+      message = `Update: Your application status for ${jobTitle} is now ${newStatus}.`;
+      notifType = 'info';
+  }
+
+  // Send Notification
   await sendNotification(application.studentId, message, notifType);
+
+  return updatedApp;
+};
+
+// Student Responds to Offer
+export const respondToOffer = async (applicationId: string, studentId: string, action: 'ACCEPT' | 'REJECT') => {
+  
+  // Fetch Application + Recruiter Info 
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    include: {
+      job: {
+        select: { title: true, recruiterId: true, companyName: true }
+      },
+      student: {
+        select: { firstName: true, lastName: true }
+      }
+    }
+  });
+
+  if (!application) throw new Error("Application not found");
+
+  // Validation Checks
+  if (application.studentId !== studentId) {
+    throw new Error("Unauthorized: You can only respond to your own applications");
+  }
+
+  if (application.status !== 'OFFERED') {
+    throw new Error("Action Failed: No pending offer found to respond to.");
+  }
+
+  // Determine New Status
+  const newStatus = action === 'ACCEPT' ? 'HIRED' : 'REJECTED';
+
+  // Update Database
+  const updatedApp = await prisma.application.update({
+    where: { id: applicationId },
+    data: { status: newStatus }
+  });
+
+  // Notify Recruiter
+  const studentName = `${application.student.firstName} ${application.student.lastName}`;
+  const jobTitle = application.job.title;
+
+  if (action === 'ACCEPT') {
+    await sendNotification(
+      application.job.recruiterId,
+      `🎉 Great News! ${studentName} has ACCEPTED your offer for ${jobTitle}!`,
+      'success'
+    );
+  } else {
+    await sendNotification(
+      application.job.recruiterId,
+      `⚠️ Update: ${studentName} has REJECTED your offer for ${jobTitle}.`,
+      'error'
+    );
+  }
 
   return updatedApp;
 };

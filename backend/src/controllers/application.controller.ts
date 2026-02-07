@@ -87,8 +87,8 @@ export const updateStatus = async (req: Request, res: Response) => {
 // Student Responds to Offer
 export const studentResponse = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const id  = req.params.id as string; // Application ID
-        const { action } = req.body; // "ACCEPT" or "REJECT"
+        const id = req.params.id as string; 
+        const { action } = req.body; // Expecting "ACCEPT" or "REJECT"
         const studentId = req.user?.id;
 
         if (!studentId) {
@@ -96,44 +96,26 @@ export const studentResponse = async (req: AuthRequest, res: Response): Promise<
             return;
         }
 
-        // Fetch Application to verify ownership and status
-        const application = await ApplicationService.getApplicationById(id); 
-
-        if (!application) {
-            res.status(404).json({ message: "Application not found" });
-            return;
-        }
-
-        if (application.studentId !== studentId) {
-             res.status(403).json({ message: "Access Denied: Not your application" });
-             return;
-        }
-
-        if (application.status !== 'OFFERED') {
-             res.status(400).json({ message: "Action Failed: No pending offer found." });
-             return;
-        }
-
-        // Determine New Status
-        let newStatus: ApplicationStatus;
-        if (action === 'ACCEPT') {
-            newStatus = ApplicationStatus.HIRED;
-        } else if (action === 'REJECT') {
-            newStatus = ApplicationStatus.REJECTED;
-        } else {
+        // Validate Input
+        if (action !== 'ACCEPT' && action !== 'REJECT') {
              res.status(400).json({ message: "Invalid Action. Use ACCEPT or REJECT." });
              return;
         }
 
-        // Update Status
-        const updatedApp = await ApplicationService.updateApplicationStatus(id, newStatus);
-        
+        // Call Service (Logic + Notification happens there)
+        const result = await ApplicationService.respondToOffer(id, studentId, action);
+
         res.status(200).json({ 
             message: `Offer ${action === 'ACCEPT' ? 'Accepted' : 'Rejected'} Successfully!`, 
-            status: newStatus 
+            status: result.status 
         });
 
     } catch (error: any) {
-        res.status(500).json({ error: error.message });
+        // Handle custom errors from service
+        if (error.message.includes("Unauthorized") || error.message.includes("Action Failed")) {
+            res.status(400).json({ message: error.message });
+        } else {
+            res.status(500).json({ error: error.message });
+        }
     }
 };

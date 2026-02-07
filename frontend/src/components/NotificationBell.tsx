@@ -27,12 +27,12 @@ const NotificationBell = () => {
   const handleNotificationClick = (notif: any) => {
     markAsRead(notif.id);
     setIsOpen(false); 
+    const refreshState = { refreshId: new Date().getTime() };
 
-    // Redirect Logic
     if (user?.role === 'STUDENT') {
-        navigate('/my-applications');
+        navigate('/my-applications', { state: refreshState });
     } else {
-        navigate('/recruiter-dashboard');
+        navigate('/recruiter-dashboard', { state: refreshState });
     }
   };
 

@@ -1,4 +1,4 @@
-import {prisma} from '../config/prisma.js'; 
+import { prisma } from '../config/prisma.js'; 
 import { getIO, userSocketMap } from '../socket.js';
 
 export const sendNotification = async (
@@ -7,7 +7,7 @@ export const sendNotification = async (
   type: 'info' | 'success' | 'warning' | 'error' = 'info'
 ) => {
   try {
-    // Save to Database (Persistence)
+    // Save to Database (Critical for persistence)
     const notification = await prisma.notification.create({
       data: {
         recipientId,
@@ -17,35 +17,46 @@ export const sendNotification = async (
       },
     });
 
-    // Check if Recipient is Online (Real-time)
+    // Check if Recipient is Online
     const socketId = userSocketMap.get(recipientId);
 
     if (socketId) {
-      // Emit Event via Socket
-      const io = getIO();
-      io.to(socketId).emit('receive_notification', notification);
-      console.log(`🔔 Notification sent to User ${recipientId} on Socket ${socketId}`);
+      try {
+        const io = getIO();
+        // Emit Event via Socket
+        io.to(socketId).emit('receive_notification', notification);
+        console.log(`🔔 Online: Sent to User ${recipientId} on Socket ${socketId}`);
+      } catch (socketError) {
+        console.error("⚠️ Socket Emit Failed (User will see it next login):", socketError);
+      }
     } else {
-      console.log(`🔕 User ${recipientId} is offline. Notification saved to DB.`);
+      console.log(`🔕 Offline: Notification saved for User ${recipientId}`);
     }
 
     return notification;
 
   } catch (error) {
-    console.error("Error sending notification:", error);
+    console.error("❌ CRITICAL: Failed to create notification:", error);
+    // Return null so the main app doesn't crash if notifications fail
+    return null;
   }
 };
 
-// Helper: Get all notifications for a user
 export const getUserNotifications = async (userId: string) => {
   return await prisma.notification.findMany({
     where: { recipientId: userId },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' } // Newest first
   });
 };
 
-// Helper: Mark as read
 export const markAsRead = async (notificationId: string) => {
+  // First check if it exists to avoid errors
+  const exists = await prisma.notification.findUnique({
+    where: { id: notificationId }
+  });
+
+  if (!exists) return null;
+
   return await prisma.notification.update({
     where: { id: notificationId },
     data: { isRead: true }

@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState,useContext } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import * as ApplicationService from '../services/application.service';
 import { 
   MapPin, CheckCircle2, XCircle, Clock, Eye, X, Calendar, DollarSign, FileText 
 } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
 
 const MyApplications = () => {
+  const auth = useContext(AuthContext);
+  const user = auth?.user;
+  const location = useLocation();
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -13,8 +17,10 @@ const MyApplications = () => {
   const [processingAction, setProcessingAction] = useState(false);
 
   useEffect(() => {
-    fetchApplications();
-  }, []);
+    if (user) {
+      fetchApplications();
+    }
+  }, [user, location.state]); // <-- This triggers re-fetch when notification is clicked
 
   const fetchApplications = async () => {
     try {

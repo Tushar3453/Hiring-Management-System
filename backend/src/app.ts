@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.routes.js';
 import jobRoutes from './routes/job.routes.js';
 import applicationRoutes from './routes/application.routes.js';
 import userRoutes from './routes/user.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/user', userRoutes); 
+app.use('/api/notifications', notificationRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
