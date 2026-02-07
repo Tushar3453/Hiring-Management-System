@@ -1,20 +1,27 @@
-import { prisma } from '../config/prisma.js'; 
+import { prisma } from '../config/prisma.js';
 import { ApplicationStatus } from '@prisma/client';
-import { calculateATSScore } from '../utils/ats.js'; 
-import { sendNotification } from './notification.service.js'; 
+import { calculateATSScore } from '../utils/ats.js';
+import { sendNotification } from './notification.service.js';
+import {
+  sendInterviewEmail,
+  sendOfferEmail,
+  sendOfferResponseEmail,
+  sendApplicationReceivedEmail,
+  sendRejectionEmail
+} from './email.service.js';
 
 // Create Application (Student applies)
 export const createApplication = async (userId: string, jobId: string) => {
-  
+
   // Parallel Fetch: Get Student Data AND Job Data
   const [student, job] = await Promise.all([
-    prisma.user.findUnique({ 
+    prisma.user.findUnique({
       where: { id: userId },
-      select: { firstName: true, lastName: true, resumeUrl: true, resumeText: true } 
+      select: { firstName: true, lastName: true, resumeUrl: true, resumeText: true, email: true }
     }),
     prisma.job.findUnique({
       where: { id: jobId },
-      select: { requirements: true, title: true, recruiterId: true } 
+      select: { requirements: true, title: true, recruiterId: true, companyName: true }
     })
   ]);
 
@@ -46,11 +53,20 @@ export const createApplication = async (userId: string, jobId: string) => {
       jobId: jobId,
       status: 'APPLIED',
       resumeUrl: student.resumeUrl,
-      atsScore: atsResult.score,        
-      missingSkills: atsResult.missingSkills 
+      atsScore: atsResult.score,
+      missingSkills: atsResult.missingSkills
     }
   });
-  
+
+  // Send "Application Received" Email
+  const studentEmail = student.email;
+  const studentName = student.firstName || "Applicant";
+  const company = job.companyName || "Company";
+
+  sendApplicationReceivedEmail(studentEmail, studentName, company, job.title)
+    .catch(err => console.error("Failed to send application received email:", err));
+
+
   return newApplication;
 };
 
@@ -65,12 +81,12 @@ export const getApplicationsByStudent = async (userId: string) => {
           location: true,
           companyName: true,
           recruiter: {
-            select: { firstName: true, email: true } 
+            select: { firstName: true, email: true }
           }
         }
       }
     },
-    orderBy: { createdAt: 'desc' } 
+    orderBy: { createdAt: 'desc' }
   });
 };
 
@@ -118,12 +134,11 @@ export const updateApplicationStatus = async (
   // Fetch Current Status + Job Details for Notification
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
-    select: { 
-        status: true,
-        studentId: true, 
-        job: {
-            select: { title: true, companyName: true } 
-        }
+    select: {
+      status: true,
+      studentId: true,
+      job: { select: { title: true, companyName: true } },
+      student: { select: { email: true, firstName: true } }
     }
   });
 
@@ -144,21 +159,21 @@ export const updateApplicationStatus = async (
     'SHORTLISTED': ['INTERVIEW', 'REJECTED'],
     'INTERVIEW': ['OFFERED', 'REJECTED'],
     'OFFERED': ['HIRED', 'REJECTED'],
-    'HIRED': [],   
-    'REJECTED': [] 
+    'HIRED': [],
+    'REJECTED': []
   };
 
   if (allowedTransitions[currentStatus] && !allowedTransitions[currentStatus].includes(newStatus)) {
-     throw new Error(`Invalid Move: You cannot go directly from ${currentStatus} to ${newStatus}`);
+    throw new Error(`Invalid Move: You cannot go directly from ${currentStatus} to ${newStatus}`);
   }
 
   // Prepare Update Data
   const updateData: any = { status: newStatus };
-  
+
   if (newStatus === 'OFFERED' && offerDetails) {
-      updateData.offerSalary = offerDetails.salary;
-      updateData.joiningDate = offerDetails.date;
-      updateData.offerNote = offerDetails.note;
+    updateData.offerSalary = offerDetails.salary;
+    updateData.joiningDate = offerDetails.date;
+    updateData.offerNote = offerDetails.note;
   }
 
   // Update in DB
@@ -167,31 +182,50 @@ export const updateApplicationStatus = async (
     data: updateData
   });
 
-  // Custom Notification Messages & Types
+  const candidateEmail = application.student.email;
+  const candidateName = application.student.firstName || "Candidate";
+  const jobTitle = application.job.title;
+  const companyName = application.job.companyName || "Company";
+
+  // Trigger Emails logic
+  if (newStatus === 'INTERVIEW') {
+    sendInterviewEmail(candidateEmail, candidateName, companyName, jobTitle)
+      .catch(err => console.error("Failed to send interview email:", err));
+  }
+
+  if (newStatus === 'OFFERED') {
+    const salary = offerDetails?.salary || "Competitive";
+    sendOfferEmail(candidateEmail, candidateName, companyName, jobTitle, salary)
+      .catch(err => console.error("Failed to send offer email:", err));
+  }
+
+  if (newStatus === 'REJECTED') {
+    sendRejectionEmail(candidateEmail, candidateName, companyName, jobTitle)
+      .catch(err => console.error("Failed to send rejection email:", err));
+  }
+
+  // In-App Notification Logic
   let message = "";
   let notifType: 'info' | 'success' | 'warning' | 'error' = 'info';
 
-  const jobTitle = application.job.title;
-  const company = application.job.companyName;
-
   switch (newStatus) {
     case 'SHORTLISTED':
-      message = `🎉 Congratulations! You have been SHORTLISTED for ${jobTitle} at ${company}.`;
+      message = `🎉 Congratulations! You have been SHORTLISTED for ${jobTitle} at ${companyName}.`;
       notifType = 'success';
       break;
 
     case 'INTERVIEW':
-      message = `📅 Good News! You have been invited for an INTERVIEW for ${jobTitle} at ${company}. Check your email/dashboard for details.`;
+      message = `📅 Good News! You have been invited for an INTERVIEW for ${jobTitle} at ${companyName}. Check your email/dashboard for details.`;
       notifType = 'info'; // Blue
       break;
 
     case 'OFFERED':
-      message = `🚀 Incredible! You have received an OFFER for the position of ${jobTitle} at ${company}!`;
+      message = `🚀 Incredible! You have received an OFFER for the position of ${jobTitle} at ${companyName}!`;
       notifType = 'success'; // Green
       break;
 
     case 'REJECTED':
-      message = `Update on your application for ${jobTitle} at ${company}. Unfortunately, the team has decided not to proceed.`;
+      message = `Update on your application for ${jobTitle} at ${companyName}. Unfortunately, the team has decided not to proceed.`;
       notifType = 'error'; // Red
       break;
 
@@ -211,15 +245,19 @@ export const updateApplicationStatus = async (
   return updatedApp;
 };
 
-// Student Responds to Offer
 export const respondToOffer = async (applicationId: string, studentId: string, action: 'ACCEPT' | 'REJECT') => {
-  
-  // Fetch Application + Recruiter Info 
+
+  // Fetch Application & Recruiter Details
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
     include: {
       job: {
-        select: { title: true, recruiterId: true, companyName: true }
+        select: {
+          title: true,
+          recruiterId: true,
+          companyName: true,
+          recruiter: { select: { email: true, firstName: true } }
+        }
       },
       student: {
         select: { firstName: true, lastName: true }
@@ -229,7 +267,7 @@ export const respondToOffer = async (applicationId: string, studentId: string, a
 
   if (!application) throw new Error("Application not found");
 
-  // Validation Checks
+  // Security Checks
   if (application.studentId !== studentId) {
     throw new Error("Unauthorized: You can only respond to your own applications");
   }
@@ -238,18 +276,19 @@ export const respondToOffer = async (applicationId: string, studentId: string, a
     throw new Error("Action Failed: No pending offer found to respond to.");
   }
 
-  // Determine New Status
+  // Status Change (HIRED or REJECTED)
   const newStatus = action === 'ACCEPT' ? 'HIRED' : 'REJECTED';
 
-  // Update Database
   const updatedApp = await prisma.application.update({
     where: { id: applicationId },
     data: { status: newStatus }
   });
 
-  // Notify Recruiter
+  // Send Notification to Recruiter
   const studentName = `${application.student.firstName} ${application.student.lastName}`;
   const jobTitle = application.job.title;
+  const recruiterEmail = application.job.recruiter.email;
+  const recruiterName = application.job.recruiter.firstName || "Recruiter";
 
   if (action === 'ACCEPT') {
     await sendNotification(
@@ -264,6 +303,15 @@ export const respondToOffer = async (applicationId: string, studentId: string, a
       'error'
     );
   }
+
+  // Send Email to Recruiter
+  sendOfferResponseEmail(
+    recruiterEmail,
+    recruiterName,
+    studentName,
+    jobTitle,
+    action === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED'
+  ).catch(err => console.error("Failed to send recruiter email:", err));
 
   return updatedApp;
 };

@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/prisma.js';
+import { sendWelcomeEmail } from './email.service.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key';
 
@@ -34,6 +35,10 @@ export const registerUser = async (userData: any) => {
       institutionName: true 
     }
   });
+
+  // using .catch() so if email fails, it doesn't crash the registration process
+  sendWelcomeEmail(email, firstName)
+  .catch(err => console.error("Failed to send welcome email:", err));
 
   return user;
 };
