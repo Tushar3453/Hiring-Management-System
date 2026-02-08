@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, Building, GraduationCap, ArrowRight } from 'lucide-react';
+import { User, Mail, Lock, Building, GraduationCap, ArrowRight, Check} from 'lucide-react'; 
 
 const Signup = () => {
   const [role, setRole] = useState('STUDENT');
@@ -15,8 +15,27 @@ const Signup = () => {
     institutionName: ''
   });
 
+  // Real-time Validation Status
+  const password = formData.password;
+  const validations = [
+    { label: "At least 6 characters", valid: password.length >= 6 },
+    { label: "One Uppercase Letter (A-Z)", valid: /[A-Z]/.test(password) },
+    { label: "One Number (0-9)", valid: /\d/.test(password) },
+    { label: "One Special Char (!@#$%^&*)", valid: /[!@#$%^&*]/.test(password) },
+  ];
+
+  // Check if all rules are passed
+  const isPasswordValid = validations.every((rule) => rule.valid);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Final Check before API Call
+    if (!isPasswordValid) {
+      alert("Please fulfill all password requirements.");
+      return;
+    }
+
     try {
       await axios.post('http://localhost:5000/api/auth/signup', {
         ...formData,
@@ -76,10 +95,27 @@ const Signup = () => {
                 onChange={(e) => setFormData({...formData, email: e.target.value})} required />
             </div>
             
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Lock className="h-5 w-5 text-gray-400" /></div>
-              <input type="password" placeholder="Password" className="w-full pl-10 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
-                onChange={(e) => setFormData({...formData, password: e.target.value})} required />
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Lock className="h-5 w-5 text-gray-400" /></div>
+                <input type="password" placeholder="Password" className="w-full pl-10 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                  onChange={(e) => setFormData({...formData, password: e.target.value})} required />
+              </div>
+              
+              {/* Password Checklist */}
+              {password.length > 0 && (
+                <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <p className="text-xs font-bold text-gray-500 mb-2 uppercase">Password Requirements:</p>
+                    <div className="grid grid-cols-1 gap-1">
+                        {validations.map((rule, index) => (
+                            <div key={index} className={`flex items-center text-xs transition-colors duration-200 ${rule.valid ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+                                {rule.valid ? <Check className="w-3 h-3 mr-2" /> : <div className="w-3 h-3 mr-2 rounded-full border border-gray-300"></div>}
+                                {rule.label}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+              )}
             </div>
 
             {role === 'STUDENT' ? (
@@ -96,7 +132,11 @@ const Signup = () => {
               </div>
             )}
 
-            <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center space-x-2">
+            <button 
+                type="submit" 
+                disabled={!isPasswordValid} // button is disabled if password is weak
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <span>Create Account</span> <ArrowRight className="w-5 h-5" />
             </button>
           </form>

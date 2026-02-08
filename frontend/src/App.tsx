@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useContext, type ReactNode } from 'react'; 
+import { useContext, type ReactNode } from 'react';
 import Navbar from './components/Navbar';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import StudentDashboard from './pages/StudentDashboard';
-import RecruiterDashboard from './pages/RecruiterDashboard'; 
+import RecruiterDashboard from './pages/RecruiterDashboard';
 import { AuthContext } from './context/AuthContext';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
@@ -12,10 +12,12 @@ import PostJob from './pages/PostJob';
 import MyApplications from './pages/MyApplications';
 import JobApplications from './pages/JobApplications';
 import JobDetails from './pages/JobDetails';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
-const PrivateRoute = ({ children }: { children: ReactNode }) => { 
+const PrivateRoute = ({ children }: { children: ReactNode }) => {
   const auth = useContext(AuthContext);
-  if (!auth) return null; 
+  if (!auth) return null;
 
   return auth.token ? <>{children}</> : <Navigate to="/login" />;
 };
@@ -24,19 +26,21 @@ function App() {
   return (
     <Router>
       <Navbar />
-      <div className="min-h-screen bg-gray-50"> 
+      <div className="min-h-screen bg-gray-50">
         <Routes>
-         <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
-          
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+
           {/* Protected Routes */}
           <Route path="/student-dashboard" element={
             <PrivateRoute>
               <StudentDashboard />
             </PrivateRoute>
           } />
-          
+
           <Route path="/recruiter-dashboard" element={
             <PrivateRoute>
               <RecruiterDashboard />

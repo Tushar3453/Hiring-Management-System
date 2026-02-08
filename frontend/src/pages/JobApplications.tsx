@@ -4,7 +4,7 @@ import * as ApplicationService from '../services/application.service';
 import * as JobService from '../services/job.service'; 
 import { 
   FileText, Mail, GraduationCap, Save, ArrowLeft, Building, MapPin, X, CheckCircle2, Clock, ChevronDown, 
-  BrainCircuit, AlertCircle, IndianRupee 
+  BrainCircuit, AlertCircle, IndianRupee, Globe, Link, Code2 
 } from 'lucide-react';
 
 interface OfferFormData {
@@ -16,7 +16,13 @@ interface OfferFormData {
 interface ExtendedApplicant extends ApplicationService.Applicant {
   confirmedStatus: string; 
   atsScore?: number;        
-  missingSkills?: string[]; 
+  missingSkills?: string[];
+  student: ApplicationService.Applicant['student'] & {
+      linkedin?: string;
+      github?: string;
+      website?: string;
+      portfolioUrl?: string; 
+  }; 
 }
 
 const JobApplications = () => {
@@ -157,10 +163,36 @@ const JobApplications = () => {
                   <div className="flex items-start justify-between">
                     <div>
                         <h3 className="text-xl font-bold text-gray-900">{app.student.firstName} {app.student.lastName}</h3>
-                        <p className="text-sm text-gray-500 mt-1 flex items-center gap-2"><Mail className="w-3.5 h-3.5"/> {app.student.email}</p>
-                        {app.student.institutionName && (
-                            <p className="text-sm text-gray-500 mt-1 flex items-center gap-2"><GraduationCap className="w-3.5 h-3.5"/> {app.student.institutionName}</p>
-                        )}
+                        
+                        <div className="mt-2 space-y-1">
+                            <p className="text-sm text-gray-500 flex items-center gap-2">
+                                <Mail className="w-3.5 h-3.5"/> {app.student.email}
+                            </p>
+                            {app.student.institutionName && (
+                                <p className="text-sm text-gray-500 flex items-center gap-2">
+                                    <GraduationCap className="w-3.5 h-3.5"/> {app.student.institutionName}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Social Links Section */}
+                        <div className="flex items-center gap-4 mt-3">
+                            {app.student.linkedin && (
+                                <a href={app.student.linkedin} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[#0077b5] transition-colors flex items-center gap-1 text-xs font-medium" title="LinkedIn">
+                                    <Link className="w-4 h-4" /> LinkedIn
+                                </a>
+                            )}
+                            {app.student.github && (
+                                <a href={app.student.github} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-black transition-colors flex items-center gap-1 text-xs font-medium" title="GitHub">
+                                    <Code2 className="w-4 h-4" /> GitHub
+                                </a>
+                            )}
+                            {(app.student.website || app.student.portfolioUrl) && (
+                                <a href={app.student.website || app.student.portfolioUrl} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-green-600 transition-colors flex items-center gap-1 text-xs font-medium" title="Portfolio">
+                                    <Globe className="w-4 h-4" /> Portfolio
+                                </a>
+                            )}
+                        </div>
                     </div>
                   </div>
                   
@@ -184,11 +216,13 @@ const JobApplications = () => {
 
                     {app.atsScore !== undefined && app.atsScore !== null && (
                       <div className="relative group cursor-help">
+                        {/* ATS Score Display with Color Logic */}
                         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)}`}>
                             <BrainCircuit className="w-4 h-4" />
                             <span className="font-bold text-sm">{app.atsScore}% Match</span>
                         </div>
                         
+                        {/* Tooltip for Missing Skills */}
                         {app.missingSkills && app.missingSkills.length > 0 && (
                              <div className="absolute left-0 bottom-full mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                 <div className="font-bold mb-1 flex items-center gap-1 text-gray-300">

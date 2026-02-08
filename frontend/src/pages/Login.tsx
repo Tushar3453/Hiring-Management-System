@@ -7,7 +7,7 @@ import { Mail, Lock, LogIn } from 'lucide-react';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false); // Loading state for better UX
+  const [loading, setLoading] = useState(false); 
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -64,6 +64,16 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required 
               />
+            </div>
+
+            {/* Forgot Password Link */}
+            <div className="flex justify-end">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline"
+              >
+                Forgot Password?
+              </Link>
             </div>
 
             <button 

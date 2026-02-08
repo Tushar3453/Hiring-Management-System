@@ -142,3 +142,24 @@ export const sendRejectionEmail = async (email: string, name: string, company: s
   `;
   return await sendEmail(email, subject, html);
 };
+
+// Forgot Password Email 
+export const sendPasswordResetEmail = async (email: string, resetLink: string) => {
+  const subject = "Reset Your Password - HireHub";
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #dc2626;">Password Reset Request</h2>
+      <p>Hello,</p>
+      <p>We received a request to reset your password for your HireHub account.</p>
+      <p>Click the button below to set a new password. This link is valid for <strong>1 hour</strong>.</p>
+      <br>
+      <a href="${resetLink}" style="background-color: #dc2626; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+      <br><br>
+      <p>Or copy and paste this link in your browser:</p>
+      <p style="color: #007bff;">${resetLink}</p>
+      <br>
+      <p style="font-size: 12px; color: #666;">If you didn't request this, please ignore this email. Your password will remain unchanged.</p>
+    </div>
+  `;
+  return await sendEmail(email, subject, html);
+};

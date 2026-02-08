@@ -28,3 +28,36 @@ export const login = async (req: Request, res: Response) => {
     res.status(401).json({ error: error.message });
   }
 };
+
+// Forgot Password 
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+        res.status(400).json({ message: "Email is required" });
+        return; 
+    }
+    const result = await AuthService.forgotPasswordService(email);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || "Something went wrong" });
+  }
+};
+
+// Reset Password 
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+    
+    if (!password) {
+        res.status(400).json({ message: "New password is required" });
+        return;
+    }
+
+    const result = await AuthService.resetPasswordService(token as string, password);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || "Something went wrong" });
+  }
+};

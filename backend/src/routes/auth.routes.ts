@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { signup, login } from '../controllers/auth.controller.js';
-import { authenticateUser, AuthRequest } from '../middlewares/auth.middleware.js';
+import { signup, login,forgotPassword,resetPassword } from '../controllers/auth.controller.js';
 
 const router = Router();
 
@@ -10,10 +9,8 @@ router.post('/signup', signup);
 // POST /api/auth/login
 router.post('/login', login);
 
-// Test Route (Sirf logged in users ke liye)
-router.get('/profile', authenticateUser, (req, res) => {
-  const user = (req as AuthRequest).user;
-  res.json({ message: `Welcome back, User ID: ${user?.id}`, role: user?.role });
-});
+// Forgot Password Routes
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password/:token', resetPassword);
 
 export default router;

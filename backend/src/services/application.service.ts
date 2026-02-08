@@ -105,7 +105,10 @@ export const getApplicationsByJobId = async (jobId: string) => {
           resumeUrl: true,
           skills: true,
           bio: true,
-          location: true
+          location: true,
+          linkedin: true,
+          github: true,
+          website: true
         }
       }
     },
