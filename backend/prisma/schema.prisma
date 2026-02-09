@@ -52,6 +52,7 @@ model User {
   jobs          Job[]          @relation("RecruiterJobs") // for recruiter (RecruiterJobs is the name of the relation)
   apps          Application[] //for student
   notifications Notification[]
+  savedJobs SavedJob[]
 }
 
 model Job {
@@ -74,6 +75,7 @@ model Job {
   recruiter    User          @relation("RecruiterJobs", fields: [recruiterId], references: [id])
   apps         Application[]
   createdAt    DateTime      @default(now())
+  savedBy SavedJob[]
 }
 
 model Application {
@@ -103,4 +105,15 @@ model Notification {
   type        String   @default("info")
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
+}
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, jobId]) // Prevent saving the same job twice
 }

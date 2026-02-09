@@ -1,8 +1,16 @@
 import { useState, useContext, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, GraduationCap, Building, Briefcase, FileText, ChevronDown } from 'lucide-react';
-import NotificationBell from './NotificationBell'; // ✅ Already imported
+import { 
+  LogOut, 
+  GraduationCap, 
+  Building, 
+  Briefcase, 
+  FileText, 
+  ChevronDown, 
+  Bookmark 
+} from 'lucide-react';
+import NotificationBell from './NotificationBell'; 
 
 const Navbar = () => {
   const auth = useContext(AuthContext);
@@ -77,7 +85,7 @@ const Navbar = () => {
                   </Link>
                 )}
 
-                {/* ✅ ADDED: Notification Bell here */}
+                {/* Notification Bell */}
                 <NotificationBell />
 
                 {/* Profile Dropdown  */}
@@ -119,14 +127,26 @@ const Navbar = () => {
                       {/* Menu Items */}
                       <div className="py-1">
                         {auth.user.role === 'STUDENT' && (
-                          <Link
-                            to="/my-applications"
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                            onClick={() => setIsDropdownOpen(false)}
-                          >
-                            <FileText className="w-4 h-4" />
-                            My Applications
-                          </Link>
+                          <>
+                            <Link
+                              to="/my-applications"
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              onClick={() => setIsDropdownOpen(false)}
+                            >
+                              <FileText className="w-4 h-4" />
+                              My Applications
+                            </Link>
+
+                            {/* --- NEW: Saved Jobs Link --- */}
+                            <Link
+                              to="/saved-jobs"
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              onClick={() => setIsDropdownOpen(false)}
+                            >
+                              <Bookmark className="w-4 h-4" />
+                              Saved Jobs
+                            </Link>
+                          </>
                         )}
                       </div>
                     </div>

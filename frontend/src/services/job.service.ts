@@ -65,3 +65,15 @@ export const updateJob = async (jobId: string, jobData: any) => {
 export const toggleJobStatus = async (jobId: string, currentStatus: boolean) => {
   return await updateJob(jobId, { isOpen: !currentStatus });
 };
+
+// Toggle Save (Bookmark/Unbookmark)
+export const toggleSaveJob = async (jobId: string) => {
+  const response = await api.post('/saved-jobs/toggle', { jobId });
+  return response.data;
+};
+
+// Get All Saved Jobs
+export const getSavedJobs = async () => {
+  const response = await api.get('/saved-jobs');
+  return response.data;
+};

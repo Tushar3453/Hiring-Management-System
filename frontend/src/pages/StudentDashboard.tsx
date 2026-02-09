@@ -8,7 +8,8 @@ import {
   Briefcase, 
   Search, 
   Clock, 
-  Filter 
+  Filter,
+  Bookmark // <--- Imported Bookmark Icon
 } from 'lucide-react'; 
 
 interface Job {
@@ -31,6 +32,9 @@ const StudentDashboard = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // --- NEW: State for Saved Jobs ---
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+
   // Search State
   const [query, setQuery] = useState(searchParams.get('query') || '');
   const [location, setLocation] = useState(searchParams.get('location') || '');
@@ -47,9 +51,47 @@ const StudentDashboard = () => {
     }
   };
 
+  // --- NEW: Fetch Saved Jobs IDs ---
+  const fetchSavedJobs = async () => {
+    if (!auth?.user) return;
+    try {
+      const savedData = await JobService.getSavedJobs();
+      // Extract IDs and store in a Set for O(1) lookup
+      const ids = new Set<string>(savedData.map((job: any) => job.id as string));
+      setSavedJobIds(ids);
+    } catch (error) {
+      console.error("Error fetching saved jobs:", error);
+    }
+  };
+
   useEffect(() => {
     fetchJobs();
+    fetchSavedJobs(); // <--- Call on mount
   }, []);
+
+  // --- Handle Toggle Save ---
+  const handleToggleSave = async (jobId: string) => {
+    if (!auth?.user) {
+      alert("Please login to save jobs.");
+      return;
+    }
+
+    try {
+      const response = await JobService.toggleSaveJob(jobId);
+      
+      setSavedJobIds(prev => {
+        const newSet = new Set(prev);
+        if (response.isSaved) {
+          newSet.add(jobId);
+        } else {
+          newSet.delete(jobId);
+        }
+        return newSet;
+      });
+    } catch (error) {
+      console.error("Failed to toggle save:", error);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,9 +111,9 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50/50">
       
-      {/* === HEADER & SEARCH SECTION (CENTERED) === */}
+      {/* === HEADER & SEARCH SECTION === */}
       <div className="bg-white border-b border-gray-200 pt-12 pb-16 px-4 sm:px-8">
-        <div className="max-w-7xl mx-auto text-center"> {/* Added text-center here */}
+        <div className="max-w-7xl mx-auto text-center">
           
           <div className="mb-10">
             <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">
@@ -83,9 +125,8 @@ const StudentDashboard = () => {
             </p>
           </div>
 
-          {/* Centered Search Bar */}
+          {/* Search Bar */}
           <form onSubmit={handleSearch} className="max-w-4xl mx-auto bg-white p-2 rounded-2xl shadow-xl border border-gray-100 flex flex-col md:flex-row gap-2 ring-1 ring-gray-100/50">
-            
             <div className="flex-1 flex items-center px-4 h-14 bg-gray-50 rounded-xl border border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all text-left">
               <Search className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
               <input 
@@ -146,6 +187,7 @@ const StudentDashboard = () => {
                 >
                   <div>
                     <div className="flex justify-between items-start mb-4">
+                      {/* Company Info */}
                       <div className="flex gap-4">
                         <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
                           {job.companyName.charAt(0)}
@@ -157,8 +199,23 @@ const StudentDashboard = () => {
                           <p className="text-sm font-medium text-gray-500">{job.companyName}</p>
                         </div>
                       </div>
+
+                      {/* --- Bookmark Button --- */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSave(job.id);
+                        }}
+                        className="text-gray-400 hover:text-blue-600 transition p-1"
+                        title={savedJobIds.has(job.id) ? "Remove from Saved" : "Save Job"}
+                      >
+                        <Bookmark 
+                          className={`w-6 h-6 ${savedJobIds.has(job.id) ? 'fill-blue-600 text-blue-600' : ''}`} 
+                        />
+                      </button>
                     </div>
 
+                    {/* Job Details Tags */}
                     <div className="flex flex-wrap gap-2 mb-4">
                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
                          <MapPin className="w-3 h-3" /> {job.location}
@@ -176,6 +233,7 @@ const StudentDashboard = () => {
                     </p>
                   </div>
 
+                  {/* Footer Actions */}
                   <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
                     <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {formatTime(job.createdAt)}

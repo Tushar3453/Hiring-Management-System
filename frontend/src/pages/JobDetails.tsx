@@ -4,7 +4,10 @@ import * as JobService from '../services/job.service';
 import * as ApplicationService from '../services/application.service'; 
 import axios from 'axios'; 
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, IndianRupee, Briefcase, Building, Clock, CheckCircle2, ArrowLeft, Ban, FileText } from 'lucide-react';
+import { 
+    MapPin, IndianRupee, Briefcase, Building, Clock, 
+    CheckCircle2, ArrowLeft, Ban, FileText, Bookmark 
+} from 'lucide-react';
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -16,7 +19,10 @@ const JobDetails = () => {
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   
-  // ✅ NEW: Specific state to track if resume exists (trusting Server over Context)
+  // --- Saved Job State ---
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Specific state to track if resume exists (trusting Server over Context)
   const [hasResume, setHasResume] = useState(false);
 
   const isRecruiter = auth?.user?.role === 'RECRUITER';
@@ -26,10 +32,37 @@ const JobDetails = () => {
         fetchJobDetails();
         if (auth?.user && !isRecruiter) {
             checkApplicationStatus();
-            verifyResumeStatus(); // Check the server for the latest resume status
+            checkSavedStatus(); // <--- Check if saved on mount
+            verifyResumeStatus(); 
         }
     }
   }, [id, auth?.user]); 
+
+  // --- Check if job is already saved ---
+  const checkSavedStatus = async () => {
+    try {
+        const savedJobs = await JobService.getSavedJobs();
+        // Check if current job ID exists in the saved jobs list
+        const exists = savedJobs.some((j: any) => j.id === id);
+        setIsSaved(exists);
+    } catch (error) {
+        console.error("Failed to check saved status");
+    }
+  };
+
+  // --- Toggle Save Handler ---
+  const handleToggleSave = async () => {
+    if (!auth?.user) {
+        alert("Please login to save jobs.");
+        return;
+    }
+    try {
+        const response = await JobService.toggleSaveJob(id!);
+        setIsSaved(response.isSaved);
+    } catch (error) {
+        console.error("Failed to toggle save", error);
+    }
+  };
 
   // Double-check with server
   const verifyResumeStatus = async () => {
@@ -126,27 +159,40 @@ const JobDetails = () => {
                 </div>
               </div>
               
-              <button 
-                onClick={handleApply}
-                disabled={applying || hasApplied || isRecruiter} 
-                className={`px-8 py-3 rounded-xl font-semibold transition shadow-md flex items-center gap-2 ${
-                    isRecruiter 
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none' 
-                    : hasApplied 
-                        ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
-                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95 disabled:opacity-50'
-                }`}
-              >
-                {isRecruiter ? (
-                    <> <Ban className="w-4 h-4"/> Recruiters Cannot Apply </>
-                ) : hasApplied ? (
-                    "Already Applied"
-                ) : applying ? (
-                    "Applying..."
-                ) : (
-                    <> <FileText className="w-4 h-4"/> Apply Now </>
+              <div className="flex gap-3">
+                {/* --- Bookmark Button --- */}
+                {!isRecruiter && (
+                    <button
+                        onClick={handleToggleSave}
+                        className="p-3 rounded-xl border border-gray-200 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                        title={isSaved ? "Remove from Saved" : "Save Job"}
+                    >
+                        <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-blue-600 text-blue-600' : ''}`} />
+                    </button>
                 )}
-              </button>
+
+                <button 
+                    onClick={handleApply}
+                    disabled={applying || hasApplied || isRecruiter} 
+                    className={`px-8 py-3 rounded-xl font-semibold transition shadow-md flex items-center gap-2 ${
+                        isRecruiter 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none' 
+                        : hasApplied 
+                            ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
+                            : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95 disabled:opacity-50'
+                    }`}
+                >
+                    {isRecruiter ? (
+                        <> <Ban className="w-4 h-4"/> Recruiters Cannot Apply </>
+                    ) : hasApplied ? (
+                        "Already Applied"
+                    ) : applying ? (
+                        "Applying..."
+                    ) : (
+                        <> <FileText className="w-4 h-4"/> Apply Now </>
+                    )}
+                </button>
+              </div>
 
             </div>
 
