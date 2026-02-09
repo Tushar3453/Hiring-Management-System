@@ -91,6 +91,17 @@ model Application {
   resumeUrl     String // Mandatory for application (Snapshot)
   atsScore      Int? // 0 - 100
   missingSkills String[] // List of missing keyword
+
+  // Interview Scheduling Fields
+  interviewDate        DateTime? // Stores the scheduled Date & Time
+  interviewLink        String?   
+  interviewNote        String?   // Instructions for the student
+  isInterviewConfirmed Boolean   @default(false) 
+
+  // Reschedule Logic
+  rescheduleRequested  Boolean   @default(false) 
+  rescheduleNote       String?   // Reason given by student
+
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }

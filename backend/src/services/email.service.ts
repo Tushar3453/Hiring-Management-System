@@ -2,35 +2,35 @@ import nodemailer from 'nodemailer';
 
 // Configure the Transporter
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS
-    }
+  service: 'gmail',
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS
+  }
 });
 
 // Generic Send Function
 export const sendEmail = async (to: string, subject: string, htmlContent: string) => {
-    try {
-        const info = await transporter.sendMail({
-            from: `"HireHub Team" <${process.env.MAIL_USER}>`, // Sender Name
-            to: to, // Receiver
-            subject: subject, // Subject Line
-            html: htmlContent, // HTML Body 
-        });
+  try {
+    const info = await transporter.sendMail({
+      from: `"HireHub Team" <${process.env.MAIL_USER}>`, // Sender Name
+      to: to, // Receiver
+      subject: subject, // Subject Line
+      html: htmlContent, // HTML Body 
+    });
 
-        console.log(`Email sent: ${info.messageId}`);
-        return info;
-    } catch (error) {
-        console.error("Error sending email:", error);
+    console.log(`Email sent: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error("Error sending email:", error);
 
-        return null;
-    }
+    return null;
+  }
 };
 
 export const sendWelcomeEmail = async (email: string, name: string) => {
-    const subject = "Welcome to HireHub! 🚀";
-    const html = `
+  const subject = "Welcome to HireHub! 🚀";
+  const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
       <h2 style="color: #2563eb;">Welcome to HireHub, ${name}!</h2>
       <p>We are thrilled to have you on board.</p>
@@ -39,29 +39,50 @@ export const sendWelcomeEmail = async (email: string, name: string) => {
       <p>Best regards,<br>The HireHub Team</p>
     </div>
   `;
-    return await sendEmail(email, subject, html);
+  return await sendEmail(email, subject, html);
 };
 
 // Interview Schedule Email 
-export const sendInterviewEmail = async (email: string, name: string, company: string, role: string) => {
-    const subject = `Interview Update: ${company} for ${role}`;
-    const html = `
+export const sendInterviewEmail = async (
+  email: string,
+  name: string,
+  company: string,
+  role: string,
+  date: Date,
+  link: string,
+  note?: string
+) => {
+  const subject = `Interview Invitation: ${company} for ${role}`;
+
+  // Format Date nicely (e.g., "Monday, February 12, 2024 at 10:00 AM")
+  const formattedDate = new Date(date).toLocaleString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-      <h2 style="color: #2563eb;">Good News, ${name}! 🎉</h2>
-      <p>Your application for <strong>${role}</strong> at <strong>${company}</strong> has moved to the <strong>Interview stage</strong>.</p>
-      <p>Please check your dashboard for further details or wait for the recruiter to contact you.</p>
+      <h2 style="color: #2563eb;">Interview Invitation 📅</h2>
+      <p>Dear ${name},</p>
+      <p>We are pleased to invite you for an interview for the <strong>${role}</strong> position at <strong>${company}</strong>.</p>
+      
+      <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>🕒 Time:</strong> ${formattedDate}</p>
+        <p><strong>🔗 Link:</strong> <a href="${link}" target="_blank">${link}</a></p>
+        ${note ? `<p><strong>📝 Note:</strong> ${note}</p>` : ''}
+      </div>
+
+      <p>Please login to your dashboard to <strong>Confirm</strong> your availability.</p>
       <br>
-      <a href="http://localhost:5173/student-dashboard" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Application</a>
       <p>Best of luck,<br>The HireHub Team</p>
     </div>
   `;
-    return await sendEmail(email, subject, html);
+  return await sendEmail(email, subject, html);
 };
 
 // Job Offer Email
 export const sendOfferEmail = async (email: string, name: string, company: string, role: string, salary: string) => {
-    const subject = `Congratulations! Job Offer from ${company} 🎉`;
-    const html = `
+  const subject = `Congratulations! Job Offer from ${company} 🎉`;
+  const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
       <h2 style="color: #16a34a;">You're Hired! (Almost) 🥂</h2>
       <p>Dear ${name},</p>
@@ -77,25 +98,25 @@ export const sendOfferEmail = async (email: string, name: string, company: strin
       <p>Congratulations again,<br>The HireHub Team</p>
     </div>
   `;
-    return await sendEmail(email, subject, html);
+  return await sendEmail(email, subject, html);
 };
 
 // Recruiter Notification Email (Offer Response) 📢
 export const sendOfferResponseEmail = async (
-    recruiterEmail: string,
-    recruiterName: string,
-    studentName: string,
-    jobTitle: string,
-    action: 'ACCEPTED' | 'REJECTED'
+  recruiterEmail: string,
+  recruiterName: string,
+  studentName: string,
+  jobTitle: string,
+  action: 'ACCEPTED' | 'REJECTED'
 ) => {
-    const subject = action === 'ACCEPTED'
-        ? `🎉 Offer Accepted! ${studentName} is joining your team`
-        : `⚠️ Offer Rejected by ${studentName}`;
+  const subject = action === 'ACCEPTED'
+    ? `🎉 Offer Accepted! ${studentName} is joining your team`
+    : `⚠️ Offer Rejected by ${studentName}`;
 
-    const color = action === 'ACCEPTED' ? '#16a34a' : '#dc2626'; // Green or Red
-    const statusText = action === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED';
+  const color = action === 'ACCEPTED' ? '#16a34a' : '#dc2626'; // Green or Red
+  const statusText = action === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED';
 
-    const html = `
+  const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
       <h2 style="color: ${color};">${action === 'ACCEPTED' ? 'Great News! 🥂' : 'Update on Offer'}</h2>
       <p>Hello ${recruiterName},</p>
@@ -108,7 +129,7 @@ export const sendOfferResponseEmail = async (
     </div>
   `;
 
-    return await sendEmail(recruiterEmail, subject, html);
+  return await sendEmail(recruiterEmail, subject, html);
 };
 
 // Application Received (Student applies)
@@ -163,3 +184,33 @@ export const sendPasswordResetEmail = async (email: string, resetLink: string) =
   `;
   return await sendEmail(email, subject, html);
 };
+
+export const sendRescheduleRequestEmail = async (
+  email: string,
+  recruiterName: string,
+  studentName: string,
+  jobTitle: string,
+  note: string
+) => {
+  const subject = `Reschedule Requested: ${studentName} for ${jobTitle}`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+      <h2 style="color: #ea580c;">Reschedule Requested 📅</h2>
+      <p>Hello ${recruiterName},</p>
+      <p>Candidate <strong>${studentName}</strong> has requested to reschedule their interview for the <strong>${jobTitle}</strong> position.</p>
+      
+      <div style="background-color: #fff7ed; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ea580c;">
+        <p><strong>📝 Reason/Note:</strong></p>
+        <p style="font-style: italic;">"${note}"</p>
+      </div>
+
+      <p>Please login to your dashboard to update the interview time.</p>
+      <br>
+      <a href="http://localhost:5173/recruiter-dashboard" style="background-color: #ea580c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
+    </div>
+  `;
+
+  return await sendEmail(email, subject, html);
+};
+

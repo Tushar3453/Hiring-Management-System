@@ -21,15 +21,15 @@ export const applyJob = async (req: Request, res: Response) => {
 
     const application = await ApplicationService.createApplication(userId, jobId);
 
-    res.status(201).json({ 
-      message: "Applied successfully! Good luck!", 
-      application 
+    res.status(201).json({
+      message: "Applied successfully! Good luck!",
+      application
     });
   } catch (error: any) {
     if (error.message === "You have already applied for this job") {
-        res.status(400).json({ message: "You have already applied for this job" });
+      res.status(400).json({ message: "You have already applied for this job" });
     } else {
-        res.status(500).json({ message: error.message || "Internal Server Error" });
+      res.status(500).json({ message: error.message || "Internal Server Error" });
     }
   }
 };
@@ -39,8 +39,8 @@ export const getMyApplications = async (req: Request, res: Response) => {
     const userId = (req as AuthRequest).user?.id;
 
     if (!userId) {
-       res.status(401).json({ message: "Unauthorized" });
-       return;
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
 
     const applications = await ApplicationService.getApplicationsByStudent(userId);
@@ -65,19 +65,21 @@ export const getJobApplications = async (req: Request, res: Response) => {
 export const updateStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params; // Application ID
-    const { status, salary, date, note } = req.body; // New Status (e.g., "SHORTLISTED")
+    const { status, salary, date, note, interviewDate, interviewLink } = req.body;
     // Recruiter can't hire manually
     if (status === 'HIRED') {
-        res.status(400).json({ message: "Action Not Allowed: You cannot manually mark as HIRED. The student must accept the offer first." });
-        return;
+      res.status(400).json({ message: "Action Not Allowed: You cannot manually mark as HIRED. The student must accept the offer first." });
+      return;
     }
 
-    const updatedApp = await ApplicationService.updateApplicationStatus(id as string, status, { salary, date, note });
-    res.status(200).json({ message: "Status updated!", updatedApp });
+    const updatedApp = await ApplicationService.updateApplicationStatus(
+      id as string, status, { salary, date, note, interviewDate, interviewLink });
+      res.status(200).json({ message: "Status updated!", updatedApp }
+    );
   } catch (error: any) {
     // Check for our custom error message
     if (error.message.includes("Invalid Move")) {
-      res.status(400).json({ message: error.message }); 
+      res.status(400).json({ message: error.message });
     } else {
       res.status(500).json({ error: error.message || "Internal Server Error" });
     }
@@ -86,36 +88,60 @@ export const updateStatus = async (req: Request, res: Response) => {
 
 // Student Responds to Offer
 export const studentResponse = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-        const id = req.params.id as string; 
-        const { action } = req.body; // Expecting "ACCEPT" or "REJECT"
-        const studentId = req.user?.id;
+  try {
+    const id = req.params.id as string;
+    const { action } = req.body; // Expecting "ACCEPT" or "REJECT"
+    const studentId = req.user?.id;
 
-        if (!studentId) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-
-        // Validate Input
-        if (action !== 'ACCEPT' && action !== 'REJECT') {
-             res.status(400).json({ message: "Invalid Action. Use ACCEPT or REJECT." });
-             return;
-        }
-
-        // Call Service (Logic + Notification happens there)
-        const result = await ApplicationService.respondToOffer(id, studentId, action);
-
-        res.status(200).json({ 
-            message: `Offer ${action === 'ACCEPT' ? 'Accepted' : 'Rejected'} Successfully!`, 
-            status: result.status 
-        });
-
-    } catch (error: any) {
-        // Handle custom errors from service
-        if (error.message.includes("Unauthorized") || error.message.includes("Action Failed")) {
-            res.status(400).json({ message: error.message });
-        } else {
-            res.status(500).json({ error: error.message });
-        }
+    if (!studentId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
+
+    // Validate Input
+    if (action !== 'ACCEPT' && action !== 'REJECT') {
+      res.status(400).json({ message: "Invalid Action. Use ACCEPT or REJECT." });
+      return;
+    }
+
+    // Call Service (Logic + Notification happens there)
+    const result = await ApplicationService.respondToOffer(id, studentId, action);
+
+    res.status(200).json({
+      message: `Offer ${action === 'ACCEPT' ? 'Accepted' : 'Rejected'} Successfully!`,
+      status: result.status
+    });
+
+  } catch (error: any) {
+    // Handle custom errors from service
+    if (error.message.includes("Unauthorized") || error.message.includes("Action Failed")) {
+      res.status(400).json({ message: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+};
+
+export const rescheduleInterview = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id;
+    const { note } = req.body;
+    const studentId = req.user?.id;
+
+    if (!studentId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+    }
+
+    if (!note) {
+        res.status(400).json({ message: "A reason/note is required for rescheduling." });
+        return;
+    }
+
+    await ApplicationService.requestReschedule(id as string, studentId, note);
+    
+    res.status(200).json({ message: "Reschedule request sent to recruiter." });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 };

@@ -1,6 +1,13 @@
 import { Router } from 'express';
-import { applyJob, getMyApplications, getJobApplications, updateStatus,studentResponse } from '../controllers/application.controller.js';
 import { authenticateUser } from '../middlewares/auth.middleware.js';
+import { 
+  applyJob, 
+  getMyApplications, 
+  getJobApplications, 
+  updateStatus, 
+  studentResponse,
+  rescheduleInterview 
+} from '../controllers/application.controller.js';
 
 const router = Router();
 
@@ -14,5 +21,7 @@ router.get('/job/:jobId', authenticateUser, getJobApplications);
 router.patch('/:id/status', authenticateUser, updateStatus);
 //To respond to offer(Student)
 router.patch('/:id/response', authenticateUser, studentResponse);
+// Request Reschedule (Student)
+router.patch('/:id/reschedule', authenticateUser, rescheduleInterview);
 
 export default router;

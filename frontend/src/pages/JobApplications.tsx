@@ -4,12 +4,19 @@ import * as ApplicationService from '../services/application.service';
 import * as JobService from '../services/job.service'; 
 import { 
   FileText, Mail, GraduationCap, Save, ArrowLeft, Building, MapPin, X, CheckCircle2, Clock, ChevronDown, 
-  BrainCircuit, AlertCircle, IndianRupee, Globe, Link, Code2 
+  BrainCircuit, IndianRupee, Globe, Link, Code2, Calendar, Video, Wand2 
 } from 'lucide-react';
 
+// --- Interfaces ---
 interface OfferFormData {
   salary: string;
   date: string;
+  note: string;
+}
+
+interface InterviewFormData {
+  date: string;
+  link: string;
   note: string;
 }
 
@@ -34,10 +41,14 @@ const JobApplications = () => {
   const [loading, setLoading] = useState(true);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
 
-  // Modal State
+  // --- Modal State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'OFFER' | 'INTERVIEW' | null>(null); // To switch modes
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  
+  // Forms
   const [offerForm, setOfferForm] = useState<OfferFormData>({ salary: '', date: '', note: '' });
+  const [interviewForm, setInterviewForm] = useState<InterviewFormData>({ date: '', link: '', note: '' });
 
   useEffect(() => {
     if (jobId) fetchData();
@@ -71,20 +82,43 @@ const JobApplications = () => {
     ));
   };
 
+  // --- Handle Save (Decides which Modal to open) ---
   const handleSaveClick = (appId: string, currentStatus: string) => {
     if (currentStatus === 'OFFERED') {
         setSelectedAppId(appId);
+        setModalType('OFFER');
         setIsModalOpen(true); 
+    } else if (currentStatus === 'INTERVIEW') { 
+        setSelectedAppId(appId);
+        setModalType('INTERVIEW');
+        setIsModalOpen(true);
     } else {
         submitStatusUpdate(appId, currentStatus);
     }
   };
 
-  const submitStatusUpdate = async (appId: string, status: string, offerDetails?: OfferFormData) => {
+  // --- Link Generator ---
+  const generateLink = () => {
+    const randomId = Math.random().toString(36).substring(7);
+    const mockLink = `https://meet.google.com/${randomId}-${Math.random().toString(36).substring(7)}`;
+    setInterviewForm(prev => ({ ...prev, link: mockLink }));
+  };
+
+  // --- Unified Submit Logic ---
+  const submitStatusUpdate = async (appId: string, status: string, data?: any) => {
     setUpdatingIds(prev => new Set(prev).add(appId));
+    
+    // Prepare Payload
+    let payload = {};
+    if (status === 'OFFERED') {
+        payload = { salary: data.salary, date: data.date, note: data.note };
+    } else if (status === 'INTERVIEW') {
+        payload = { interviewDate: data.date, interviewLink: data.link, note: data.note };
+    }
+
     try {
-      await ApplicationService.updateApplicationStatus(appId, status, offerDetails);
-      alert("Updated Successfully!");
+      await ApplicationService.updateApplicationStatus(appId, status, payload);
+      alert(status === 'INTERVIEW' ? "Interview Scheduled! 📅" : "Updated Successfully!");
       setIsModalOpen(false);
       fetchData(); 
     } catch (error: any) {
@@ -111,7 +145,7 @@ const JobApplications = () => {
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         
-        {/* === HEADER === */}
+        {/* HEADER */}
         <button 
           onClick={() => navigate('/recruiter-dashboard')} 
           className="flex items-center text-gray-500 hover:text-gray-900 mb-6 transition font-medium text-sm"
@@ -143,7 +177,7 @@ const JobApplications = () => {
           </div>
         )}
 
-        {/* === CANDIDATE LIST === */}
+        {/* CANDIDATE LIST */}
         <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-gray-900">Candidates</h2>
         </div>
@@ -158,12 +192,11 @@ const JobApplications = () => {
             {applications.map((app) => (
               <div key={app.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col lg:flex-row gap-6 hover:border-blue-300 transition-all duration-200">
                 
-                {/* Candidate Details */}
+                {/* Candidate Info Section (Same as before) */}
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
                     <div>
                         <h3 className="text-xl font-bold text-gray-900">{app.student.firstName} {app.student.lastName}</h3>
-                        
                         <div className="mt-2 space-y-1">
                             <p className="text-sm text-gray-500 flex items-center gap-2">
                                 <Mail className="w-3.5 h-3.5"/> {app.student.email}
@@ -174,21 +207,20 @@ const JobApplications = () => {
                                 </p>
                             )}
                         </div>
-
-                        {/* Social Links Section */}
+                        {/* Social Links */}
                         <div className="flex items-center gap-4 mt-3">
                             {app.student.linkedin && (
-                                <a href={app.student.linkedin} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[#0077b5] transition-colors flex items-center gap-1 text-xs font-medium" title="LinkedIn">
+                                <a href={app.student.linkedin} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[#0077b5] transition-colors flex items-center gap-1 text-xs font-medium">
                                     <Link className="w-4 h-4" /> LinkedIn
                                 </a>
                             )}
                             {app.student.github && (
-                                <a href={app.student.github} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-black transition-colors flex items-center gap-1 text-xs font-medium" title="GitHub">
+                                <a href={app.student.github} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-black transition-colors flex items-center gap-1 text-xs font-medium">
                                     <Code2 className="w-4 h-4" /> GitHub
                                 </a>
                             )}
                             {(app.student.website || app.student.portfolioUrl) && (
-                                <a href={app.student.website || app.student.portfolioUrl} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-green-600 transition-colors flex items-center gap-1 text-xs font-medium" title="Portfolio">
+                                <a href={app.student.website || app.student.portfolioUrl} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-green-600 transition-colors flex items-center gap-1 text-xs font-medium">
                                     <Globe className="w-4 h-4" /> Portfolio
                                 </a>
                             )}
@@ -196,7 +228,7 @@ const JobApplications = () => {
                     </div>
                   </div>
                   
-                  {/* Skills Tag */}
+                  {/* Skills */}
                   {app.student.skills && app.student.skills.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-4">
                           {app.student.skills.slice(0, 4).map((skill: string, i: number) => (
@@ -205,56 +237,42 @@ const JobApplications = () => {
                       </div>
                   )}
 
-                  {/* BOTTOM ROW: Resume + ATS Score */}
+                  {/* Resume & ATS */}
                   <div className="mt-5 flex flex-wrap items-center gap-4">
-                    
                     {app.student.resumeUrl && (
                       <a href={app.student.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
                         <FileText className="w-4 h-4" /> View Resume
                       </a>
                     )}
-
-                    {app.atsScore !== undefined && app.atsScore !== null && (
-                      <div className="relative group cursor-help">
-                        {/* ATS Score Display with Color Logic */}
-                        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)}`}>
+                    {app.atsScore !== undefined && (
+                      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)}`}>
                             <BrainCircuit className="w-4 h-4" />
                             <span className="font-bold text-sm">{app.atsScore}% Match</span>
-                        </div>
-                        
-                        {/* Tooltip for Missing Skills */}
-                        {app.missingSkills && app.missingSkills.length > 0 && (
-                             <div className="absolute left-0 bottom-full mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                <div className="font-bold mb-1 flex items-center gap-1 text-gray-300">
-                                    <AlertCircle className="w-3 h-3" /> Missing Keywords:
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                    {app.missingSkills.map(skill => (
-                                        <span key={skill} className="bg-gray-700 px-1.5 py-0.5 rounded text-[10px]">{skill}</span>
-                                    ))}
-                                </div>
-                                <div className="absolute left-4 top-full w-2 h-2 bg-gray-900 rotate-45"></div>
-                             </div>
-                        )}
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Action Section */}
+                {/* Status & Actions Section */}
                 <div className="lg:w-80 border-l border-gray-100 lg:pl-8 flex flex-col justify-center">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Current Status</label>
 
+                    {/* Logic for different statuses */}
                     {app.confirmedStatus === 'HIRED' ? (
                         <div className="w-full bg-green-50 text-green-700 border border-green-200 p-4 rounded-xl flex items-center justify-center gap-2 font-bold shadow-sm">
                             <CheckCircle2 className="w-5 h-5" /> Hired
                         </div>
                     ) : app.confirmedStatus === 'OFFERED' ? (
-                        <div className="w-full bg-purple-50 text-purple-700 border border-purple-200 p-4 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm animate-pulse">
-                             <div className="flex items-center gap-2 font-bold">
-                                <Clock className="w-4 h-4" /> Offer Sent
-                             </div>
-                             <span className="text-[10px] text-purple-600/80 font-medium">Waiting for response</span>
+                        <div className="w-full bg-purple-50 text-purple-700 border border-purple-200 p-4 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
+                             <div className="flex items-center gap-2 font-bold"><Clock className="w-4 h-4" /> Offer Sent</div>
+                        </div>
+                    ) : app.confirmedStatus === 'INTERVIEW' ? (
+                        <div className="w-full bg-blue-50 text-blue-700 border border-blue-200 p-4 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
+                             <div className="flex items-center gap-2 font-bold"><Video className="w-4 h-4" /> Interview Scheduled</div>
+                             {/* Allow re-scheduling */}
+                             <button onClick={() => { setSelectedAppId(app.id); setModalType('INTERVIEW'); setIsModalOpen(true); }} className="text-xs underline mt-1 hover:text-blue-900">
+                                Reschedule
+                             </button>
                         </div>
                     ) : (
                         <div className="flex gap-2 w-full">
@@ -263,9 +281,7 @@ const JobApplications = () => {
                                     value={app.status} 
                                     onChange={(e) => handleLocalChange(app.id, e.target.value)}
                                     disabled={app.confirmedStatus === 'REJECTED'}
-                                    className={`w-full appearance-none p-3 pr-8 rounded-xl border text-sm font-bold outline-none transition-all cursor-pointer
-                                    ${app.status === 'REJECTED' ? 'bg-red-50 border-red-200 text-red-600' : 
-                                      'bg-white border-gray-200 text-gray-700 hover:border-blue-400 focus:ring-2 focus:ring-blue-100'}`}
+                                    className={`w-full appearance-none p-3 pr-8 rounded-xl border text-sm font-bold outline-none transition-all cursor-pointer ${app.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-white text-gray-700'}`}
                                 >
                                     <option value="APPLIED">Applied</option>
                                     <option value="SHORTLISTED">Shortlisted</option>
@@ -279,20 +295,11 @@ const JobApplications = () => {
                              <button
                                 onClick={() => handleSaveClick(app.id, app.status)}
                                 disabled={updatingIds.has(app.id) || app.confirmedStatus === 'REJECTED'}
-                                className="bg-gray-900 hover:bg-black text-white p-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 shadow-sm"
-                                title="Save Status"
+                                className="bg-gray-900 hover:bg-black text-white p-3 rounded-xl transition-all active:scale-95 disabled:opacity-50"
                              >
-                                {updatingIds.has(app.id) ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <Save className="w-5 h-5" />
-                                )}
+                                {updatingIds.has(app.id) ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
                              </button>
                         </div>
-                    )}
-                    
-                    {app.confirmedStatus === 'REJECTED' && (
-                        <p className="text-center text-[10px] text-red-400 mt-2 font-medium">Application Rejected</p>
                     )}
                 </div>
 
@@ -302,63 +309,128 @@ const JobApplications = () => {
         )}
       </div>
 
-      {/* --- OFFER MODAL --- */}
+      {/* --- UNIFIED MODAL (Handles both Offer & Interview) --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                
+                {/* Modal Header */}
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900">Send Job Offer</h2>
-                        <p className="text-sm text-gray-500">Enter final details for the candidate</p>
+                        <h2 className="text-xl font-bold text-gray-900">
+                            {modalType === 'OFFER' ? 'Send Job Offer' : 'Schedule Interview'}
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            {modalType === 'OFFER' ? 'Enter final details for the candidate' : 'Send invitation details'}
+                        </p>
                     </div>
                     <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
-                <div className="space-y-4">
-                    <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                            <label className="block text-xs font-bold text-gray-500 uppercase">Salary (CTC)</label>
-                            <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                Budget: {job?.minSalary} - {job?.maxSalary} {job?.currency}
-                            </span>
+                {/* --- OFFER FORM --- */}
+                {modalType === 'OFFER' && (
+                    <div className="space-y-4">
+                        <div>
+                            <div className="flex justify-between items-center mb-1.5">
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Salary (CTC)</label>
+                                <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">Budget: {job?.minSalary}-{job?.maxSalary}</span>
+                            </div>
+                            <input 
+                                className="w-full border border-gray-300 rounded-lg p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none" 
+                                placeholder={`e.g. ${job?.maxSalary} LPA`}
+                                value={offerForm.salary}
+                                onChange={(e) => setOfferForm({...offerForm, salary: e.target.value})}
+                            />
                         </div>
-                        <input 
-                            className="w-full border border-gray-300 rounded-lg p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition" 
-                            placeholder={`e.g. ${job?.maxSalary} LPA`}
-                            value={offerForm.salary}
-                            onChange={(e) => setOfferForm({...offerForm, salary: e.target.value})}
-                        />
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Joining Date</label>
+                            <input 
+                                type="date"
+                                className="w-full border border-gray-300 rounded-lg p-3 font-medium outline-none" 
+                                value={offerForm.date}
+                                onChange={(e) => setOfferForm({...offerForm, date: e.target.value})}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Note</label>
+                            <textarea 
+                                rows={3}
+                                className="w-full border border-gray-300 rounded-lg p-3 font-medium outline-none resize-none" 
+                                value={offerForm.note}
+                                onChange={(e) => setOfferForm({...offerForm, note: e.target.value})}
+                            />
+                        </div>
+                        <button 
+                            onClick={() => selectedAppId && submitStatusUpdate(selectedAppId, 'OFFERED', offerForm)}
+                            disabled={!offerForm.salary || !offerForm.date}
+                            className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-6 hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            Send Offer
+                        </button>
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Joining Date</label>
-                        <input 
-                            type="date"
-                            className="w-full border border-gray-300 rounded-lg p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition" 
-                            value={offerForm.date}
-                            onChange={(e) => setOfferForm({...offerForm, date: e.target.value})}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Personal Note</label>
-                        <textarea 
-                            rows={3}
-                            className="w-full border border-gray-300 rounded-lg p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition resize-none" 
-                            placeholder="We are excited to have you on board..."
-                            value={offerForm.note}
-                            onChange={(e) => setOfferForm({...offerForm, note: e.target.value})}
-                        />
-                    </div>
-                </div>
+                )}
 
-                <button 
-                    onClick={() => selectedAppId && submitStatusUpdate(selectedAppId, 'OFFERED', offerForm)}
-                    disabled={!offerForm.salary || !offerForm.date}
-                    className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-6 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 transition-all shadow-lg shadow-blue-200"
-                >
-                    Send Offer & Notify Candidate
-                </button>
+                {/* --- INTERVIEW FORM --- */}
+                {modalType === 'INTERVIEW' && (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Date & Time</label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                <input 
+                                    type="datetime-local"
+                                    className="w-full border border-gray-300 rounded-lg pl-10 p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none" 
+                                    value={interviewForm.date}
+                                    onChange={(e) => setInterviewForm({...interviewForm, date: e.target.value})}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Meeting Link</label>
+                            <div className="relative flex gap-2">
+                                <div className="relative flex-1">
+                                    <Video className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                    <input 
+                                        className="w-full border border-gray-300 rounded-lg pl-10 p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none" 
+                                        placeholder="Paste link or generate"
+                                        value={interviewForm.link}
+                                        onChange={(e) => setInterviewForm({...interviewForm, link: e.target.value})}
+                                    />
+                                </div>
+                                <button 
+                                    onClick={generateLink}
+                                    className="bg-purple-100 text-purple-700 p-3 rounded-lg hover:bg-purple-200 transition-colors"
+                                    title="Auto-Generate Link"
+                                >
+                                    <Wand2 className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Instructions</label>
+                            <textarea 
+                                rows={3}
+                                className="w-full border border-gray-300 rounded-lg p-3 font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none" 
+                                placeholder="e.g. Please bring your portfolio..."
+                                value={interviewForm.note}
+                                onChange={(e) => setInterviewForm({...interviewForm, note: e.target.value})}
+                            />
+                        </div>
+
+                        <button 
+                            onClick={() => selectedAppId && submitStatusUpdate(selectedAppId, 'INTERVIEW', interviewForm)}
+                            disabled={!interviewForm.date || !interviewForm.link}
+                            className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-6 hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            Schedule Interview
+                        </button>
+                    </div>
+                )}
+
             </div>
         </div>
       )}

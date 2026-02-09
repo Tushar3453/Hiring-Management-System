@@ -42,15 +42,29 @@ export const getJobApplications = async (jobId: string) => {
 };
 
 // Recruiter: Update applicant status
-export const updateApplicationStatus = async (appId: string, status: string, offerDetails?: any) => {
-  // If offerDetails exists, spread it into the body
-  const payload = { status, ...offerDetails };
-  const response = await api.patch(`/applications/${appId}/status`, payload);
+export const updateApplicationStatus = async (
+  id: string,
+  status: string,
+  data?: {
+    salary?: string;
+    date?: string;
+    note?: string;
+    interviewDate?: string;
+    interviewLink?: string;
+  }
+) => {
+  // We pass the whole 'data' object to the backend
+  const response = await api.patch(`/applications/${id}/status`, { status, ...data });
   return response.data;
 };
 
 // Student: Accept/Reject Offer
 export const respondToOffer = async (applicationId: string, action: 'ACCEPT' | 'REJECT') => {
   const response = await api.patch(`/applications/${applicationId}/response`, { action });
+  return response.data;
+};
+
+export const requestReschedule = async (id: string, note: string) => {
+  const response = await api.patch(`/applications/${id}/reschedule`, { note });
   return response.data;
 };

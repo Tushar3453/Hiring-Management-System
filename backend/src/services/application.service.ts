@@ -7,7 +7,8 @@ import {
   sendOfferEmail,
   sendOfferResponseEmail,
   sendApplicationReceivedEmail,
-  sendRejectionEmail
+  sendRejectionEmail,
+  sendRescheduleRequestEmail
 } from './email.service.js';
 
 // Create Application (Student applies)
@@ -131,7 +132,13 @@ export const getApplicationById = async (id: string) => {
 export const updateApplicationStatus = async (
   applicationId: string,
   newStatus: ApplicationStatus,
-  offerDetails?: { salary: string, date: string, note: string }
+  data?: { 
+    salary?: string, 
+    date?: string, 
+    note?: string,
+    interviewDate?: string,
+    interviewLink?: string
+  }
 ) => {
 
   // Fetch Current Status + Job Details for Notification
@@ -152,15 +159,17 @@ export const updateApplicationStatus = async (
   const currentStatus = application.status;
 
   // Prevent Duplicate Updates
-  if (currentStatus === newStatus) {
-    throw new Error(`Candidate is already marked as ${newStatus}. No changes made.`);
+  if (currentStatus === newStatus && newStatus !== 'INTERVIEW') {
+     // We allow re-updating 'INTERVIEW' status for rescheduling
+     throw new Error(`Candidate is already marked as ${newStatus}. No changes made.`);
   }
 
   // Rule Book for Transitions
+  // Allowing INTERVIEW -> INTERVIEW for rescheduling updates
   const allowedTransitions: Record<string, string[]> = {
     'APPLIED': ['SHORTLISTED', 'REJECTED'],
     'SHORTLISTED': ['INTERVIEW', 'REJECTED'],
-    'INTERVIEW': ['OFFERED', 'REJECTED'],
+    'INTERVIEW': ['OFFERED', 'REJECTED', 'INTERVIEW'], 
     'OFFERED': ['HIRED', 'REJECTED'],
     'HIRED': [],
     'REJECTED': []
@@ -171,12 +180,49 @@ export const updateApplicationStatus = async (
   }
 
   // Prepare Update Data
-  const updateData: any = { status: newStatus };
+  let updateData: any = { status: newStatus };
 
-  if (newStatus === 'OFFERED' && offerDetails) {
-    updateData.offerSalary = offerDetails.salary;
-    updateData.joiningDate = offerDetails.date;
-    updateData.offerNote = offerDetails.note;
+  const candidateEmail = application.student.email;
+  const candidateName = application.student.firstName || "Candidate";
+  const jobTitle = application.job.title;
+  const companyName = application.job.companyName || "Company";
+
+  // --- LOGIC FOR INTERVIEW ---
+  if (newStatus === 'INTERVIEW') {
+    if (!data?.interviewDate || !data?.interviewLink) {
+        throw new Error("Interview Date and Link are required");
+    }
+    
+    updateData = {
+        ...updateData,
+        interviewDate: new Date(data.interviewDate),
+        interviewLink: data.interviewLink,
+        interviewNote: data.note,
+        rescheduleRequested: false, // Reset if it was requested
+        isInterviewConfirmed: false // Reset confirmation
+    };
+
+    // Send Email
+    sendInterviewEmail(
+        candidateEmail,
+        candidateName,
+        companyName,
+        jobTitle,
+        new Date(data.interviewDate),
+        data.interviewLink,
+        data.note
+    ).catch(err => console.error("Failed to send interview email:", err));
+  }
+
+  // --- LOGIC FOR OFFER ---
+  if (newStatus === 'OFFERED' && data) {
+    updateData.offerSalary = data.salary;
+    updateData.joiningDate = data.date;
+    updateData.offerNote = data.note;
+
+    const salary = data.salary || "Competitive";
+    sendOfferEmail(candidateEmail, candidateName, companyName, jobTitle, salary)
+      .catch(err => console.error("Failed to send offer email:", err));
   }
 
   // Update in DB
@@ -185,23 +231,7 @@ export const updateApplicationStatus = async (
     data: updateData
   });
 
-  const candidateEmail = application.student.email;
-  const candidateName = application.student.firstName || "Candidate";
-  const jobTitle = application.job.title;
-  const companyName = application.job.companyName || "Company";
-
-  // Trigger Emails logic
-  if (newStatus === 'INTERVIEW') {
-    sendInterviewEmail(candidateEmail, candidateName, companyName, jobTitle)
-      .catch(err => console.error("Failed to send interview email:", err));
-  }
-
-  if (newStatus === 'OFFERED') {
-    const salary = offerDetails?.salary || "Competitive";
-    sendOfferEmail(candidateEmail, candidateName, companyName, jobTitle, salary)
-      .catch(err => console.error("Failed to send offer email:", err));
-  }
-
+  // --- LOGIC FOR REJECTION ---
   if (newStatus === 'REJECTED') {
     sendRejectionEmail(candidateEmail, candidateName, companyName, jobTitle)
       .catch(err => console.error("Failed to send rejection email:", err));
@@ -218,7 +248,8 @@ export const updateApplicationStatus = async (
       break;
 
     case 'INTERVIEW':
-      message = `📅 Good News! You have been invited for an INTERVIEW for ${jobTitle} at ${companyName}. Check your email/dashboard for details.`;
+      const dateStr = data?.interviewDate ? new Date(data.interviewDate).toLocaleDateString() : 'soon';
+      message = `📅 Good News! You have been invited for an INTERVIEW for ${jobTitle} at ${companyName} on ${dateStr}. Check your dashboard to confirm.`;
       notifType = 'info'; // Blue
       break;
 
@@ -315,6 +346,66 @@ export const respondToOffer = async (applicationId: string, studentId: string, a
     jobTitle,
     action === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED'
   ).catch(err => console.error("Failed to send recruiter email:", err));
+
+  return updatedApp;
+};
+
+export const requestReschedule = async (applicationId: string, studentId: string, note: string) => {
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    include: {
+        job: { 
+            select: { 
+                title: true, 
+                recruiterId: true, 
+                companyName: true,
+                recruiter: { select: { email: true, firstName: true } } // Fetch Recruiter Email
+            } 
+        },
+        student: { select: { firstName: true, lastName: true } }
+    }
+  });
+
+  if (!application) throw new Error("Application not found");
+
+  if (application.studentId !== studentId) {
+    throw new Error("Unauthorized");
+  }
+
+  if (application.status !== 'INTERVIEW') {
+    throw new Error("Reschedule is only available for scheduled interviews.");
+  }
+
+  // Update DB
+  const updatedApp = await prisma.application.update({
+    where: { id: applicationId },
+    data: {
+      rescheduleRequested: true,
+      rescheduleNote: note,
+      isInterviewConfirmed: false 
+    }
+  });
+
+  // Prepare names
+  const studentName = `${application.student.firstName} ${application.student.lastName}`;
+  const recruiterEmail = application.job.recruiter.email;
+  const recruiterName = application.job.recruiter.firstName || "Recruiter";
+
+  // Send In-App Notification 
+  await sendNotification(
+    application.job.recruiterId,
+    `📅 Action Required: ${studentName} requested a reschedule for ${application.job.title}.`,
+    'warning'
+  );
+
+  // Send Email to Recruiter 
+  sendRescheduleRequestEmail(
+      recruiterEmail,
+      recruiterName,
+      studentName,
+      application.job.title,
+      note
+  ).catch(err => console.error("Failed to send reschedule email:", err));
 
   return updatedApp;
 };
