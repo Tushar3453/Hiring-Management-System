@@ -192,7 +192,7 @@ const JobApplications = () => {
             {applications.map((app) => (
               <div key={app.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col lg:flex-row gap-6 hover:border-blue-300 transition-all duration-200">
                 
-                {/* Candidate Info Section (Same as before) */}
+                {/* Candidate Info Section */}
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
                     <div>
@@ -245,19 +245,37 @@ const JobApplications = () => {
                       </a>
                     )}
                     {app.atsScore !== undefined && (
-                      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)}`}>
-                            <BrainCircuit className="w-4 h-4" />
-                            <span className="font-bold text-sm">{app.atsScore}% Match</span>
-                      </div>
+                        <div className="relative group">
+                            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)} cursor-help`}>
+                                    <BrainCircuit className="w-4 h-4" />
+                                    <span className="font-bold text-sm">{app.atsScore}% Match</span>
+                            </div>
+                            
+                            {/* Tooltip for Missing Skills */}
+                            {app.missingSkills && app.missingSkills.length > 0 && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-gray-900 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none">
+                                    <p className="font-bold mb-2 text-gray-300">Missing Skills:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {app.missingSkills.map((skill, idx) => (
+                                            <span key={idx} className="bg-red-500/20 text-red-200 px-1.5 py-0.5 rounded border border-red-500/30">
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    {/* Arrow */}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                            )}
+                        </div>
                     )}
                   </div>
                 </div>
 
                 {/* Status & Actions Section */}
-                <div className="lg:w-80 border-l border-gray-100 lg:pl-8 flex flex-col justify-center">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Current Status</label>
+                <div className="lg:w-80 border-l border-gray-100 lg:pl-8 flex flex-col justify-center gap-3">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Status</label>
 
-                    {/* Logic for different statuses */}
+                    {/* Terminal States (No Actions) */}
                     {app.confirmedStatus === 'HIRED' ? (
                         <div className="w-full bg-green-50 text-green-700 border border-green-200 p-4 rounded-xl flex items-center justify-center gap-2 font-bold shadow-sm">
                             <CheckCircle2 className="w-5 h-5" /> Hired
@@ -266,39 +284,46 @@ const JobApplications = () => {
                         <div className="w-full bg-purple-50 text-purple-700 border border-purple-200 p-4 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
                              <div className="flex items-center gap-2 font-bold"><Clock className="w-4 h-4" /> Offer Sent</div>
                         </div>
-                    ) : app.confirmedStatus === 'INTERVIEW' ? (
-                        <div className="w-full bg-blue-50 text-blue-700 border border-blue-200 p-4 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
-                             <div className="flex items-center gap-2 font-bold"><Video className="w-4 h-4" /> Interview Scheduled</div>
-                             {/* Allow re-scheduling */}
-                             <button onClick={() => { setSelectedAppId(app.id); setModalType('INTERVIEW'); setIsModalOpen(true); }} className="text-xs underline mt-1 hover:text-blue-900">
-                                Reschedule
-                             </button>
-                        </div>
                     ) : (
-                        <div className="flex gap-2 w-full">
-                             <div className="relative flex-1">
-                                <select
-                                    value={app.status} 
-                                    onChange={(e) => handleLocalChange(app.id, e.target.value)}
-                                    disabled={app.confirmedStatus === 'REJECTED'}
-                                    className={`w-full appearance-none p-3 pr-8 rounded-xl border text-sm font-bold outline-none transition-all cursor-pointer ${app.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-white text-gray-700'}`}
-                                >
-                                    <option value="APPLIED">Applied</option>
-                                    <option value="SHORTLISTED">Shortlisted</option>
-                                    <option value="INTERVIEW">Interview</option>
-                                    <option value="OFFERED">Send Offer</option>
-                                    <option value="REJECTED">Reject</option>
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                             </div>
-                             
-                             <button
-                                onClick={() => handleSaveClick(app.id, app.status)}
-                                disabled={updatingIds.has(app.id) || app.confirmedStatus === 'REJECTED'}
-                                className="bg-gray-900 hover:bg-black text-white p-3 rounded-xl transition-all active:scale-95 disabled:opacity-50"
-                             >
-                                {updatingIds.has(app.id) ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
-                             </button>
+                        // Active States (APPLIED, SHORTLISTED, INTERVIEW)
+                        <div className="flex flex-col gap-3 w-full">
+                            
+                            {/* Information Banner for Interview */}
+                            {app.confirmedStatus === 'INTERVIEW' && (
+                                <div className="bg-blue-50 text-blue-700 border border-blue-200 p-3 rounded-xl flex items-center justify-between text-xs font-bold shadow-sm">
+                                    <span className="flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Interview Scheduled</span>
+                                    <button onClick={() => { setSelectedAppId(app.id); setModalType('INTERVIEW'); setIsModalOpen(true); }} className="underline hover:text-blue-900">
+                                        Reschedule
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Dropdown Control */}
+                            <div className="flex gap-2 w-full">
+                                 <div className="relative flex-1">
+                                    <select
+                                        value={app.status} 
+                                        onChange={(e) => handleLocalChange(app.id, e.target.value)}
+                                        disabled={app.confirmedStatus === 'REJECTED'}
+                                        className={`w-full appearance-none p-3 pr-8 rounded-xl border text-sm font-bold outline-none transition-all cursor-pointer ${app.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-white text-gray-700'}`}
+                                    >
+                                        <option value="APPLIED">Applied</option>
+                                        <option value="SHORTLISTED">Shortlisted</option>
+                                        <option value="INTERVIEW">Interview</option>
+                                        <option value="OFFERED">Send Offer</option>
+                                        <option value="REJECTED">Reject</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                 </div>
+                                 
+                                 <button
+                                    onClick={() => handleSaveClick(app.id, app.status)}
+                                    disabled={updatingIds.has(app.id) || app.confirmedStatus === 'REJECTED'}
+                                    className="bg-gray-900 hover:bg-black text-white p-3 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                                 >
+                                    {updatingIds.has(app.id) ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
+                                 </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -309,11 +334,10 @@ const JobApplications = () => {
         )}
       </div>
 
-      {/* --- UNIFIED MODAL (Handles both Offer & Interview) --- */}
+      {/* --- UNIFIED MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                
                 {/* Modal Header */}
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                     <div>
