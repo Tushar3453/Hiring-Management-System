@@ -4,7 +4,7 @@ import * as ApplicationService from '../services/application.service';
 import * as JobService from '../services/job.service'; 
 import { 
   FileText, Mail, GraduationCap, Save, ArrowLeft, Building, MapPin, X, CheckCircle2, Clock, ChevronDown, 
-  BrainCircuit, IndianRupee, Globe, Link, Code2, Calendar, Video, Wand2 
+  BrainCircuit, IndianRupee, Globe, Link, Code2, Calendar, Video, Wand2, AlertCircle 
 } from 'lucide-react';
 
 // --- Interfaces ---
@@ -24,6 +24,8 @@ interface ExtendedApplicant extends ApplicationService.Applicant {
   confirmedStatus: string; 
   atsScore?: number;        
   missingSkills?: string[];
+  rescheduleRequested?: boolean;
+  rescheduleNote?: string;
   student: ApplicationService.Applicant['student'] & {
       linkedin?: string;
       github?: string;
@@ -262,7 +264,6 @@ const JobApplications = () => {
                                             </span>
                                         ))}
                                     </div>
-                                    {/* Arrow */}
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                                 </div>
                             )}
@@ -275,8 +276,23 @@ const JobApplications = () => {
                 <div className="lg:w-80 border-l border-gray-100 lg:pl-8 flex flex-col justify-center gap-3">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Status</label>
 
-                    {/* Terminal States (No Actions) */}
-                    {app.confirmedStatus === 'HIRED' ? (
+                    {/* --- Priority Check: RESCHEDULE REQUESTED --- */}
+                    {app.rescheduleRequested ? (
+                         <div className="bg-red-50 text-red-800 border border-red-200 p-4 rounded-xl flex flex-col gap-3 shadow-sm animate-in fade-in zoom-in duration-300">
+                            <div className="flex items-center gap-2 font-bold text-sm text-red-700">
+                                <AlertCircle className="w-4 h-4" /> Reschedule Requested
+                            </div>
+                            <div className="bg-white/60 p-2 rounded text-xs italic text-red-900 border border-red-100">
+                                "{app.rescheduleNote}"
+                            </div>
+                            <button
+                                onClick={() => { setSelectedAppId(app.id); setModalType('INTERVIEW'); setIsModalOpen(true); }}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold text-xs transition shadow-sm"
+                            >
+                                Update Interview Date
+                            </button>
+                         </div>
+                    ) : app.confirmedStatus === 'HIRED' ? (
                         <div className="w-full bg-green-50 text-green-700 border border-green-200 p-4 rounded-xl flex items-center justify-center gap-2 font-bold shadow-sm">
                             <CheckCircle2 className="w-5 h-5" /> Hired
                         </div>
@@ -288,7 +304,7 @@ const JobApplications = () => {
                         // Active States (APPLIED, SHORTLISTED, INTERVIEW)
                         <div className="flex flex-col gap-3 w-full">
                             
-                            {/* Information Banner for Interview */}
+                            {/* Standard Interview Banner (Only if NO reschedule request) */}
                             {app.confirmedStatus === 'INTERVIEW' && (
                                 <div className="bg-blue-50 text-blue-700 border border-blue-200 p-3 rounded-xl flex items-center justify-between text-xs font-bold shadow-sm">
                                     <span className="flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Interview Scheduled</span>
