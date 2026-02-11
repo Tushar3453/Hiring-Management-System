@@ -6,7 +6,8 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { 
     MapPin, IndianRupee, Briefcase, Building, Clock, 
-    CheckCircle2, ArrowLeft, Ban, FileText, Bookmark 
+    CheckCircle2, ArrowLeft, Ban, FileText, Bookmark, 
+    Upload, X 
 } from 'lucide-react';
 
 const JobDetails = () => {
@@ -18,12 +19,13 @@ const JobDetails = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
-  
-  // --- Saved Job State ---
   const [isSaved, setIsSaved] = useState(false);
-
-  // Specific state to track if resume exists (trusting Server over Context)
   const [hasResume, setHasResume] = useState(false);
+
+  // --- STATE FOR MODAL & RESUME SELECTION ---
+  const [showModal, setShowModal] = useState(false);
+  const [resumeType, setResumeType] = useState<'profile' | 'upload'>('profile');
+  const [customFile, setCustomFile] = useState<File | null>(null);
 
   const isRecruiter = auth?.user?.role === 'RECRUITER';
 
@@ -32,7 +34,7 @@ const JobDetails = () => {
         fetchJobDetails();
         if (auth?.user && !isRecruiter) {
             checkApplicationStatus();
-            checkSavedStatus(); // <--- Check if saved on mount
+            checkSavedStatus();
             verifyResumeStatus(); 
         }
     }
@@ -42,7 +44,6 @@ const JobDetails = () => {
   const checkSavedStatus = async () => {
     try {
         const savedJobs = await JobService.getSavedJobs();
-        // Check if current job ID exists in the saved jobs list
         const exists = savedJobs.some((j: any) => j.id === id);
         setIsSaved(exists);
     } catch (error) {
@@ -67,13 +68,10 @@ const JobDetails = () => {
   // Double-check with server
   const verifyResumeStatus = async () => {
     try {
-        // First, trust the context if it says yes
         if (auth?.user?.resumeUrl) {
             setHasResume(true);
             return;
         }
-
-        // If context says no, ask the server (in case user just uploaded it)
         const token = localStorage.getItem('token');
         const response = await axios.get('http://localhost:5000/api/user/profile', {
             headers: { Authorization: `Bearer ${token}` }
@@ -81,7 +79,6 @@ const JobDetails = () => {
 
         if (response.data && response.data.resumeUrl) {
             setHasResume(true);
-            console.log("Resume found on server (Context was stale)");
         }
     } catch (error) {
         console.error("Failed to verify resume status", error);
@@ -109,7 +106,8 @@ const JobDetails = () => {
     }
   };
 
-  const handleApply = async () => {
+  // --- INITIAL CLICK (Opens Modal) ---
+  const handleApplyClick = () => {
     if (!auth?.user) {
       alert("Please login to apply!");
       navigate('/login');
@@ -117,19 +115,40 @@ const JobDetails = () => {
     }
 
     if (isRecruiter) return;
-    if (!hasResume) {
-      const confirmUpload = confirm("You need a resume to apply. Go to profile to upload one?");
-      if (confirmUpload) navigate('/profile');
-      return;
+    setShowModal(true);
+  };
+
+  // --- FILE CHANGE HANDLER ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          setCustomFile(e.target.files[0]);
+      }
+  };
+
+  // --- FINAL SUBMIT (Inside Modal) ---
+  const submitApplication = async () => {
+    // Validation
+    if (resumeType === 'profile' && !hasResume) {
+        const confirmUpload = confirm("No profile resume found. Go to profile to upload one?");
+        if (confirmUpload) navigate('/profile');
+        return;
     }
 
-    if (!confirm(`Apply for ${job?.title} at ${job?.companyName}?`)) return;
+    if (resumeType === 'upload' && !customFile) {
+        alert("Please select a file to upload.");
+        return;
+    }
 
     setApplying(true);
     try {
-      await JobService.applyForJob(id!);
+      // Use ApplicationService instead of JobService to support File Upload
+      const fileToUpload = resumeType === 'upload' ? customFile! : undefined;
+      
+      await ApplicationService.applyJob(id!, fileToUpload);
+      
       alert("Application Submitted Successfully! 🚀");
       setHasApplied(true); 
+      setShowModal(false);
       navigate('/my-applications'); 
     } catch (error: any) {
       alert(error.response?.data?.message || "Something went wrong");
@@ -172,7 +191,7 @@ const JobDetails = () => {
                 )}
 
                 <button 
-                    onClick={handleApply}
+                    onClick={handleApplyClick} 
                     disabled={applying || hasApplied || isRecruiter} 
                     className={`px-8 py-3 rounded-xl font-semibold transition shadow-md flex items-center gap-2 ${
                         isRecruiter 
@@ -239,6 +258,80 @@ const JobDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* --- APPLY MODAL --- */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-900">Submit Application</h2>
+                    <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-500"/></button>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                    <p className="text-sm text-gray-600 font-medium">Select a resume to submit:</p>
+                    
+                    {/* Option 1: Profile Resume */}
+                    <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${resumeType === 'profile' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
+                        <input 
+                            type="radio" 
+                            name="resumeOption" 
+                            className="w-5 h-5 text-blue-600"
+                            checked={resumeType === 'profile'}
+                            onChange={() => setResumeType('profile')}
+                        />
+                        <div>
+                            <p className="font-bold text-gray-900 flex items-center gap-2">
+                                <FileText className="w-4 h-4"/> Use Profile Resume
+                            </p>
+                            {/* Show warning if no profile resume exists */}
+                            {!hasResume ? (
+                                <p className="text-xs text-red-500 mt-1 font-bold">No resume found on profile.</p>
+                            ) : (
+                                <p className="text-xs text-gray-500 mt-1">Uses the default resume from your profile.</p>
+                            )}
+                        </div>
+                    </label>
+
+                    {/* Option 2: Upload New */}
+                    <label className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${resumeType === 'upload' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
+                        <input 
+                            type="radio" 
+                            name="resumeOption" 
+                            className="w-5 h-5 text-blue-600"
+                            checked={resumeType === 'upload'}
+                            onChange={() => setResumeType('upload')}
+                        />
+                        <div className="flex-1">
+                            <p className="font-bold text-gray-900 flex items-center gap-2">
+                                <Upload className="w-4 h-4"/> Upload Custom Resume
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">Upload a specific resume for this job.</p>
+                            
+                            {/* File Input (Only visible if selected) */}
+                            {resumeType === 'upload' && (
+                                <input 
+                                    type="file" 
+                                    accept=".pdf"
+                                    onChange={handleFileChange}
+                                    className="mt-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
+                                />
+                            )}
+                        </div>
+                    </label>
+                </div>
+
+                <button 
+                    onClick={submitApplication}
+                    disabled={applying || (resumeType === 'upload' && !customFile) || (resumeType === 'profile' && !hasResume)}
+                    className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 transition shadow-lg shadow-blue-100"
+                >
+                    {applying ? "Submitting..." : "Confirm & Apply"}
+                </button>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };

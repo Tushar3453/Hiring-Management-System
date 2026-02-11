@@ -8,11 +8,12 @@ import {
   studentResponse,
   rescheduleInterview 
 } from '../controllers/application.controller.js';
+import upload from '../middlewares/upload.middleware.js';
 
 const router = Router();
 
 // To apply for a job(User)
-router.post('/', authenticateUser, applyJob);
+router.post('/apply', authenticateUser, upload.single('resume'), applyJob);
 //To see my applications(User)
 router.get('/history', authenticateUser, getMyApplications);
 //To see job applications(Recruiter)

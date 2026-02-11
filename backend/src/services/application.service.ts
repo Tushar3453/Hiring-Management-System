@@ -12,24 +12,19 @@ import {
 } from './email.service.js';
 
 // Create Application (Student applies)
-export const createApplication = async (userId: string, jobId: string) => {
+export const createApplication = async (
+  userId: string,
+  jobId: string,
+  resumeUrl: string,     
+  resumeText: string    
+) => {
 
-  // Parallel Fetch: Get Student Data AND Job Data
-  const [student, job] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { firstName: true, lastName: true, resumeUrl: true, resumeText: true, email: true }
-    }),
-    prisma.job.findUnique({
-      where: { id: jobId },
-      select: { requirements: true, title: true, recruiterId: true, companyName: true }
-    })
-  ]);
+  // Fetch Job Data Only (We already have resume data)
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { requirements: true, title: true, recruiterId: true, companyName: true }
+  });
 
-  // Validations
-  if (!student || !student.resumeUrl) {
-    throw new Error("Please upload a resume in your profile before applying.");
-  }
   if (!job) {
     throw new Error("Job not found.");
   }
@@ -44,7 +39,7 @@ export const createApplication = async (userId: string, jobId: string) => {
   }
 
   // EXECUTE ATS LOGIC 
-  const atsResult = calculateATSScore(student.resumeText || "", job.requirements);
+  const atsResult = calculateATSScore(resumeText, job.requirements);
   console.log(`📊 ATS Score: ${atsResult.score}% for Job: ${job.title}`);
 
   // Create Application
@@ -53,20 +48,23 @@ export const createApplication = async (userId: string, jobId: string) => {
       studentId: userId,
       jobId: jobId,
       status: 'APPLIED',
-      resumeUrl: student.resumeUrl,
+      resumeUrl: resumeUrl, 
       atsScore: atsResult.score,
       missingSkills: atsResult.missingSkills
     }
   });
 
   // Send "Application Received" Email
-  const studentEmail = student.email;
-  const studentName = student.firstName || "Applicant";
-  const company = job.companyName || "Company";
+  // Fetch student email for notification
+  const student = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, firstName: true }
+  });
 
-  sendApplicationReceivedEmail(studentEmail, studentName, company, job.title)
-    .catch(err => console.error("Failed to send application received email:", err));
-
+  if (student) {
+    sendApplicationReceivedEmail(student.email, student.firstName || "Applicant", job.companyName || "Company", job.title)
+      .catch(err => console.error("Failed to send application received email:", err));
+  }
 
   return newApplication;
 };
@@ -132,9 +130,9 @@ export const getApplicationById = async (id: string) => {
 export const updateApplicationStatus = async (
   applicationId: string,
   newStatus: ApplicationStatus,
-  data?: { 
-    salary?: string, 
-    date?: string, 
+  data?: {
+    salary?: string,
+    date?: string,
     note?: string,
     interviewDate?: string,
     interviewLink?: string
@@ -160,8 +158,8 @@ export const updateApplicationStatus = async (
 
   // Prevent Duplicate Updates
   if (currentStatus === newStatus && newStatus !== 'INTERVIEW') {
-     // We allow re-updating 'INTERVIEW' status for rescheduling
-     throw new Error(`Candidate is already marked as ${newStatus}. No changes made.`);
+    // We allow re-updating 'INTERVIEW' status for rescheduling
+    throw new Error(`Candidate is already marked as ${newStatus}. No changes made.`);
   }
 
   // Rule Book for Transitions
@@ -169,7 +167,7 @@ export const updateApplicationStatus = async (
   const allowedTransitions: Record<string, string[]> = {
     'APPLIED': ['SHORTLISTED', 'REJECTED'],
     'SHORTLISTED': ['INTERVIEW', 'REJECTED'],
-    'INTERVIEW': ['OFFERED', 'REJECTED', 'INTERVIEW'], 
+    'INTERVIEW': ['OFFERED', 'REJECTED', 'INTERVIEW'],
     'OFFERED': ['HIRED', 'REJECTED'],
     'HIRED': [],
     'REJECTED': []
@@ -190,27 +188,27 @@ export const updateApplicationStatus = async (
   // --- LOGIC FOR INTERVIEW ---
   if (newStatus === 'INTERVIEW') {
     if (!data?.interviewDate || !data?.interviewLink) {
-        throw new Error("Interview Date and Link are required");
+      throw new Error("Interview Date and Link are required");
     }
-    
+
     updateData = {
-        ...updateData,
-        interviewDate: new Date(data.interviewDate),
-        interviewLink: data.interviewLink,
-        interviewNote: data.note,
-        rescheduleRequested: false, // Reset if it was requested
-        isInterviewConfirmed: false // Reset confirmation
+      ...updateData,
+      interviewDate: new Date(data.interviewDate),
+      interviewLink: data.interviewLink,
+      interviewNote: data.note,
+      rescheduleRequested: false, // Reset if it was requested
+      isInterviewConfirmed: false // Reset confirmation
     };
 
     // Send Email
     sendInterviewEmail(
-        candidateEmail,
-        candidateName,
-        companyName,
-        jobTitle,
-        new Date(data.interviewDate),
-        data.interviewLink,
-        data.note
+      candidateEmail,
+      candidateName,
+      companyName,
+      jobTitle,
+      new Date(data.interviewDate),
+      data.interviewLink,
+      data.note
     ).catch(err => console.error("Failed to send interview email:", err));
   }
 
@@ -354,15 +352,15 @@ export const requestReschedule = async (applicationId: string, studentId: string
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
     include: {
-        job: { 
-            select: { 
-                title: true, 
-                recruiterId: true, 
-                companyName: true,
-                recruiter: { select: { email: true, firstName: true } } // Fetch Recruiter Email
-            } 
-        },
-        student: { select: { firstName: true, lastName: true } }
+      job: {
+        select: {
+          title: true,
+          recruiterId: true,
+          companyName: true,
+          recruiter: { select: { email: true, firstName: true } } // Fetch Recruiter Email
+        }
+      },
+      student: { select: { firstName: true, lastName: true } }
     }
   });
 
@@ -382,7 +380,7 @@ export const requestReschedule = async (applicationId: string, studentId: string
     data: {
       rescheduleRequested: true,
       rescheduleNote: note,
-      isInterviewConfirmed: false 
+      isInterviewConfirmed: false
     }
   });
 
@@ -400,11 +398,11 @@ export const requestReschedule = async (applicationId: string, studentId: string
 
   // Send Email to Recruiter 
   sendRescheduleRequestEmail(
-      recruiterEmail,
-      recruiterName,
-      studentName,
-      application.job.title,
-      note
+    recruiterEmail,
+    recruiterName,
+    studentName,
+    application.job.title,
+    note
   ).catch(err => console.error("Failed to send reschedule email:", err));
 
   return updatedApp;

@@ -29,6 +29,21 @@ export interface Applicant {
   };
 }
 
+export const applyJob = async (jobId: string, file?: File) => {
+  const formData = new FormData();
+  formData.append('jobId', jobId);
+  
+  if (file) {
+      formData.append('resume', file); 
+  }
+
+  const response = await api.post('/applications/apply', formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+  });
+  
+  return response.data;
+};
+
 // Get logged-in user's applications
 export const getMyApplications = async () => {
   const response = await api.get('/applications/history');

@@ -1,36 +1,83 @@
 import { Request, Response } from 'express';
+import { prisma } from '../config/prisma.js';
 import * as ApplicationService from '../services/application.service.js';
-import { AuthRequest } from '../middlewares/auth.middleware.js';
-import { ApplicationStatus } from '@prisma/client';
+import { parseResume } from '../utils/ats.js';
+import cloudinary from '../config/cloudinary.js';
+import fs from 'fs'; 
 
-export const applyJob = async (req: Request, res: Response) => {
+interface AuthRequest extends Request {
+  user?: { id: string };
+  file?: Express.Multer.File; 
+}
+
+export const applyJob = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // get user id from auth middleware
-    const userId = (req as AuthRequest).user?.id;
+    const userId = req.user?.id;
     const { jobId } = req.body;
-
+    
     if (!userId) {
-      res.status(401).json({ message: "Unauthorized" });
-      return;
+        res.status(401).json({ message: "Unauthorized" });
+        return;
     }
 
-    if (!jobId) {
-      res.status(400).json({ message: "Job ID is required" });
-      return;
+    let finalResumeUrl: string | null = null;
+    let finalResumeText: string | null = null;
+
+    // --- SCENARIO 1: User uploaded a custom resume ---
+    if (req.file) {
+        console.log("Processing Custom Resume...");
+        
+        try {
+            // Read file from disk to get Buffer for Parsing
+            const fileBuffer = fs.readFileSync(req.file.path);
+            finalResumeText = await parseResume(fileBuffer);
+
+            // Upload to Cloudinary using the File Path
+            const cloudRes = await cloudinary.uploader.upload(req.file.path, {
+                folder: "application_resumes",
+                resource_type: "auto"
+            });
+            
+            finalResumeUrl = cloudRes.secure_url;
+
+            // Clean up: Delete local file
+            fs.unlinkSync(req.file.path);
+
+        } catch (err) {
+            console.error("File processing failed", err);
+            // Attempt to clean up even on error
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            throw new Error("Failed to process resume file");
+        }
+    } 
+    // --- SCENARIO 2: Use Profile Resume ---
+    else {
+        const userProfile = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { resumeUrl: true, resumeText: true }
+        });
+
+        if (!userProfile?.resumeUrl) {
+            res.status(400).json({ message: "No resume found. Please upload one or apply with a file." });
+            return;
+        }
+
+        finalResumeUrl = userProfile.resumeUrl;
+        finalResumeText = userProfile.resumeText || ""; 
     }
 
-    const application = await ApplicationService.createApplication(userId, jobId);
+    const application = await ApplicationService.createApplication(
+        userId, 
+        jobId, 
+        finalResumeUrl, 
+        finalResumeText
+    );
+    
+    res.status(201).json(application);
 
-    res.status(201).json({
-      message: "Applied successfully! Good luck!",
-      application
-    });
   } catch (error: any) {
-    if (error.message === "You have already applied for this job") {
-      res.status(400).json({ message: "You have already applied for this job" });
-    } else {
-      res.status(500).json({ message: error.message || "Internal Server Error" });
-    }
+    console.error("Apply Error:", error);
+    res.status(500).json({ message: error.message || "Failed to apply" });
   }
 };
 

@@ -26,6 +26,7 @@ interface ExtendedApplicant extends ApplicationService.Applicant {
   missingSkills?: string[];
   rescheduleRequested?: boolean;
   rescheduleNote?: string;
+  resumeUrl?: string; 
   student: ApplicationService.Applicant['student'] & {
       linkedin?: string;
       github?: string;
@@ -45,7 +46,7 @@ const JobApplications = () => {
 
   // --- Modal State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'OFFER' | 'INTERVIEW' | null>(null); // To switch modes
+  const [modalType, setModalType] = useState<'OFFER' | 'INTERVIEW' | null>(null);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   
   // Forms
@@ -84,7 +85,6 @@ const JobApplications = () => {
     ));
   };
 
-  // --- Handle Save (Decides which Modal to open) ---
   const handleSaveClick = (appId: string, currentStatus: string) => {
     if (currentStatus === 'OFFERED') {
         setSelectedAppId(appId);
@@ -99,18 +99,15 @@ const JobApplications = () => {
     }
   };
 
-  // --- Link Generator ---
   const generateLink = () => {
     const randomId = Math.random().toString(36).substring(7);
     const mockLink = `https://meet.google.com/${randomId}-${Math.random().toString(36).substring(7)}`;
     setInterviewForm(prev => ({ ...prev, link: mockLink }));
   };
 
-  // --- Unified Submit Logic ---
   const submitStatusUpdate = async (appId: string, status: string, data?: any) => {
     setUpdatingIds(prev => new Set(prev).add(appId));
     
-    // Prepare Payload
     let payload = {};
     if (status === 'OFFERED') {
         payload = { salary: data.salary, date: data.date, note: data.note };
@@ -209,7 +206,6 @@ const JobApplications = () => {
                                 </p>
                             )}
                         </div>
-                        {/* Social Links */}
                         <div className="flex items-center gap-4 mt-3">
                             {app.student.linkedin && (
                                 <a href={app.student.linkedin} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[#0077b5] transition-colors flex items-center gap-1 text-xs font-medium">
@@ -241,11 +237,18 @@ const JobApplications = () => {
 
                   {/* Resume & ATS */}
                   <div className="mt-5 flex flex-wrap items-center gap-4">
-                    {app.student.resumeUrl && (
-                      <a href={app.student.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
+                    {/* --- RESUME LINK --- */}
+                    {(app.resumeUrl || app.student.resumeUrl) && (
+                      <a 
+                        href={app.resumeUrl || app.student.resumeUrl} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
                         <FileText className="w-4 h-4" /> View Resume
                       </a>
                     )}
+
                     {app.atsScore !== undefined && (
                         <div className="relative group">
                             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getScoreColor(app.atsScore)} cursor-help`}>
@@ -354,7 +357,6 @@ const JobApplications = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                {/* Modal Header */}
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900">
@@ -369,7 +371,6 @@ const JobApplications = () => {
                     </button>
                 </div>
 
-                {/* --- OFFER FORM --- */}
                 {modalType === 'OFFER' && (
                     <div className="space-y-4">
                         <div>
@@ -412,7 +413,6 @@ const JobApplications = () => {
                     </div>
                 )}
 
-                {/* --- INTERVIEW FORM --- */}
                 {modalType === 'INTERVIEW' && (
                     <div className="space-y-4">
                         <div>
@@ -470,11 +470,9 @@ const JobApplications = () => {
                         </button>
                     </div>
                 )}
-
             </div>
         </div>
       )}
-
     </div>
   );
 };
