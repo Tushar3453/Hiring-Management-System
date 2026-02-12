@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Configure the Transporter
 const transporter = nodemailer.createTransport({
@@ -94,7 +95,7 @@ export const sendOfferEmail = async (email: string, name: string, company: strin
 
       <p>Please login to your dashboard to <strong>Accept</strong> or <strong>Reject</strong> this offer.</p>
       <br>
-      <a href="http://localhost:5173/my-applications" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Offer Letter</a>
+      <a href="${CLIENT_URL}/my-applications" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Offer Letter</a>
       <p>Congratulations again,<br>The HireHub Team</p>
     </div>
   `;
@@ -124,7 +125,7 @@ export const sendOfferResponseEmail = async (
       
       <p>Please login to your dashboard to view the updated status.</p>
       <br>
-      <a href="http://localhost:5173/dashboard" style="background-color: ${color}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Application</a>
+      <a href="${CLIENT_URL}/dashboard" style="background-color: ${color}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Application</a>
       <p>Best regards,<br>The HireHub Team</p>
     </div>
   `;
@@ -207,7 +208,7 @@ export const sendRescheduleRequestEmail = async (
 
       <p>Please login to your dashboard to update the interview time.</p>
       <br>
-      <a href="http://localhost:5173/recruiter-dashboard" style="background-color: #ea580c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
+      <a href="${CLIENT_URL}/recruiter-dashboard" style="background-color: #ea580c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
     </div>
   `;
 
