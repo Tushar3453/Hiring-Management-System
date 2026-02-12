@@ -1,22 +1,32 @@
 import nodemailer from 'nodemailer';
+import dns from 'dns'; // <--- 1. Import DNS module
+
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
+try {
+  if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+  }
+} catch (e) {
+  console.log("Could not set default result order, ignoring...");
+}
+
 console.log("📧 Email Config Check:");
 console.log("USER:", process.env.MAIL_USER ? "Loaded ✅" : "Missing ❌");
-console.log("PASS:", process.env.MAIL_PASS ? "Loaded (Length: " + process.env.MAIL_PASS.length + ") ✅" : "Missing ❌");
 
-// Configure the Transporter 
+// Configure Transporter 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',  // Explicit Host
-  port: 465,               // Secure Port (SSL)
-  secure: true,            // True for port 465
+  host: 'smtp.gmail.com',
+  port: 587,               // <--- (TLS) - More reliable on Render
+  secure: false,           // <--- False for 587 (StartTLS uses upgrade mechanism)
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false 
-  },
-  family: 4
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'       // <--- Helps with handshake errors
+  }
 } as any);
 
 // Verify connection configuration
