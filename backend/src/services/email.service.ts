@@ -15,8 +15,9 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     rejectUnauthorized: false 
-  }
-});
+  },
+  family: 4
+} as any);
 
 // Verify connection configuration
 transporter.verify(function (error, success) {
