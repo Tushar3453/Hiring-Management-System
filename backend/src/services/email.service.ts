@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import dns from 'dns'; // <--- 1. Import DNS module
+import dns from 'dns';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
@@ -17,16 +17,17 @@ console.log("USER:", process.env.MAIL_USER ? "Loaded ✅" : "Missing ❌");
 // Configure Transporter 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,               // <--- (TLS) - More reliable on Render
-  secure: false,           // <--- False for 587 (StartTLS uses upgrade mechanism)
+  port: 587,
+  secure: false, 
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS
   },
   tls: {
     rejectUnauthorized: false,
-    ciphers: 'SSLv3'       // <--- Helps with handshake errors
-  }
+    ciphers: 'SSLv3' 
+  },
+  localAddress: '0.0.0.0', 
 } as any);
 
 // Verify connection configuration
