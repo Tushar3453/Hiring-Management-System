@@ -2,13 +2,13 @@ import { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as JobService from '../services/job.service';
 import * as ApplicationService from '../services/application.service'; 
-import axios from 'axios'; 
 import { AuthContext } from '../context/AuthContext';
 import { 
     MapPin, IndianRupee, Briefcase, Building, Clock, 
     CheckCircle2, ArrowLeft, Ban, FileText, Bookmark, 
     Upload, X 
 } from 'lucide-react';
+import api from '../services/api';
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -73,7 +73,7 @@ const JobDetails = () => {
             return;
         }
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/user/profile', {
+        const response = await api.get('/user/profile', {
             headers: { Authorization: `Bearer ${token}` }
         });
 

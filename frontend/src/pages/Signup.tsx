@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, Building, GraduationCap, ArrowRight, Check} from 'lucide-react'; 
+import api from '../services/api'; 
 
 const Signup = () => {
   const [role, setRole] = useState('STUDENT');
@@ -37,7 +37,7 @@ const Signup = () => {
     }
 
     try {
-      await axios.post('http://localhost:5000/api/auth/signup', {
+      await api.post('auth/signup', {
         ...formData,
         role: role
       });

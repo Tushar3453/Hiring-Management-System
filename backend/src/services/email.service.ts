@@ -1,12 +1,29 @@
 import nodemailer from 'nodemailer';
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+console.log("📧 Email Config Check:");
+console.log("USER:", process.env.MAIL_USER ? "Loaded ✅" : "Missing ❌");
+console.log("PASS:", process.env.MAIL_PASS ? "Loaded (Length: " + process.env.MAIL_PASS.length + ") ✅" : "Missing ❌");
 
-// Configure the Transporter
+// Configure the Transporter 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',  // Explicit Host
+  port: 465,               // Secure Port (SSL)
+  secure: true,            // True for port 465
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false 
+  }
+});
+
+// Verify connection configuration
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("🚨 Transporter Error:", error);
+  } else {
+    console.log("✅ Server is ready to take our messages");
   }
 });
 

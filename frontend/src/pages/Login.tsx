@@ -1,8 +1,8 @@
 import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, LogIn } from 'lucide-react'; 
+import api from '../services/api'; 
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,11 +11,11 @@ const Login = () => {
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => { 
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email, password });
       auth?.login(res.data.user, res.data.token);
       if (res.data.user.role === 'RECRUITER') {
         navigate('/recruiter-dashboard');

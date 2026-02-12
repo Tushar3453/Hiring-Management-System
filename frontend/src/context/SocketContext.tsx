@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { AuthContext } from './AuthContext';
-import axios from 'axios'; 
+import api from '../services/api'; 
 
 export interface Notification {
   id: string;
@@ -19,6 +19,8 @@ interface SocketContextType {
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const SOCKET_URL = API_BASE_URL.replace('/api', ''); 
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
@@ -33,13 +35,11 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // get notifications from backend
+  // Fetch notifications from backend
   const fetchNotifications = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/notifications', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Using 'api' instance (Header/Token is auto-attached)
+      const res = await api.get('/notifications');
       setNotifications(res.data);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -48,16 +48,18 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      // fetch history
+      // 1. Fetch old notifications
       fetchNotifications(); 
 
-      // connect socket
-      const newSocket = io("http://localhost:5000"); 
+      // 2. Connect Socket
+      console.log("Connecting to Socket at:", SOCKET_URL);
+      const newSocket = io(SOCKET_URL); 
       setSocket(newSocket);
 
+      // 3. Register User ID
       newSocket.emit("register", user.id);
 
-      // listen for new notifications
+      // 4. Listen for new notifications
       newSocket.on("receive_notification", (newNotif: Notification) => {
         setNotifications((prev) => [newNotif, ...prev]);
       });
@@ -66,7 +68,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         newSocket.disconnect();
       };
     } else {
-        // logout
+        // Logout cleanup
         if (socket) {
             socket.disconnect();
             setSocket(null);
@@ -75,19 +77,16 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
-  // mark as read
+  // Mark as read
   const markAsRead = async (id: string) => {
-    // frontend update
+    // 1. Optimistic UI Update (Immediate)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     
-    // backend update
+    // 2. Backend Update
     try {
-        const token = localStorage.getItem('token');
-        await axios.put(`http://localhost:5000/api/notifications/${id}/read`, {}, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put(`/notifications/${id}/read`);
     } catch (err) {
-        console.error("Failed to mark read on server");
+        console.error("Failed to mark read on server", err);
     }
   };
 
