@@ -10,12 +10,9 @@ export const userSocketMap = new Map<string, string>();
 export const initSocket = (httpServer: HttpServer) => {
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://your-frontend-project.vercel.app" 
-      ],
-      methods: ["GET", "POST"]
+      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      methods: ["GET", "POST"],
+      credentials:true
     },
   });
 

@@ -48,18 +48,21 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      // 1. Fetch old notifications
+      // Fetch old notifications
       fetchNotifications(); 
 
-      // 2. Connect Socket
+      // Connect Socket
       console.log("Connecting to Socket at:", SOCKET_URL);
-      const newSocket = io(SOCKET_URL); 
+      const newSocket = io(SOCKET_URL, {
+        withCredentials: true,
+        transports: ["websocket", "polling"] // fallback for cloud servers
+      }); 
       setSocket(newSocket);
 
-      // 3. Register User ID
+      // Register User ID
       newSocket.emit("register", user.id);
 
-      // 4. Listen for new notifications
+      // Listen for new notifications
       newSocket.on("receive_notification", (newNotif: Notification) => {
         setNotifications((prev) => [newNotif, ...prev]);
       });
@@ -79,10 +82,10 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
   // Mark as read
   const markAsRead = async (id: string) => {
-    // 1. Optimistic UI Update (Immediate)
+    // Optimistic UI Update (Immediate)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     
-    // 2. Backend Update
+    // Backend Update
     try {
         await api.put(`/notifications/${id}/read`);
     } catch (err) {
