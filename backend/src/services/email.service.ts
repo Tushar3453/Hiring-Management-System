@@ -3,57 +3,66 @@ import dns from 'dns';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
-try {
-  if (dns.setDefaultResultOrder) {
-    dns.setDefaultResultOrder('ipv4first');
-  }
-} catch (e) {
-  console.log("Could not set default result order, ignoring...");
-}
+let transporter: nodemailer.Transporter | null = null;
 
-console.log("📧 Email Config Check:");
-console.log("USER:", process.env.MAIL_USER ? "Loaded ✅" : "Missing ❌");
+// Manually find IPv4 Address
+const getTransporter = async () => {
+  // If already created, return it
+  if (transporter) return transporter;
 
-// Configure Transporter 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, 
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false,
-    ciphers: 'SSLv3' 
-  },
-  localAddress: '0.0.0.0', 
-} as any);
+  console.log("Resolving Gmail IPv4...");
 
-// Verify connection configuration
-transporter.verify(function (error, success) {
-  if (error) {
-    console.error("🚨 Transporter Error:", error);
-  } else {
-    console.log("✅ Server is ready to take our messages");
-  }
-});
+  // Manually Resolve IP (Bypasses System's IPv6 preference)
+  const ip = await new Promise<string>((resolve) => {
+    dns.resolve4('smtp.gmail.com', (err, addresses) => {
+      if (err || !addresses.length) {
+        console.error("DNS Resolution Failed, falling back to hostname");
+        resolve('smtp.gmail.com'); // Fallback
+      } else {
+        console.log(`Resolved Gmail IP: ${addresses[0]}`);
+        resolve(addresses[0]); // Use the first IPv4 address
+      }
+    });
+  });
 
-// Generic Send Function
+  // Transporter with the SPECIFIC IP
+  transporter = nodemailer.createTransport({
+    host: ip, // <--- Using IP directly (e.g., 142.250.x.x)
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS
+    },
+    tls: {
+      servername: 'smtp.gmail.com', 
+      rejectUnauthorized: false
+    }
+  });
+
+  return transporter;
+};
+
+// Send Function 
 export const sendEmail = async (to: string, subject: string, htmlContent: string) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"HireHub Team" <${process.env.MAIL_USER}>`, // Sender Name
-      to: to, // Receiver
-      subject: subject, // Subject Line
-      html: htmlContent, // HTML Body 
+    // Get the transporter (waits for DNS resolution)
+    const emailTransporter = await getTransporter();
+
+    // Send Mail
+    const info = await emailTransporter.sendMail({
+      from: `"HireHub Team" <${process.env.MAIL_USER}>`,
+      to: to,
+      subject: subject,
+      html: htmlContent,
     });
 
     console.log(`Email sent: ${info.messageId}`);
     return info;
   } catch (error) {
     console.error("Error sending email:", error);
-
+    // Reset transporter if connection fails, so we retry DNS next time
+    transporter = null;
     return null;
   }
 };
