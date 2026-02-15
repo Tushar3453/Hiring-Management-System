@@ -15,6 +15,7 @@ import JobDetails from './pages/JobDetails';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import SavedJobs from './pages/SavedJobs';
+import { Toaster } from 'react-hot-toast';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => {
   const auth = useContext(AuthContext);
@@ -26,6 +27,24 @@ const PrivateRoute = ({ children }: { children: ReactNode }) => {
 function App() {
   return (
     <Router>
+      <Toaster
+        position="top-right"
+        containerStyle={{
+          top: 80, 
+          right: 20,
+        }}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+            padding: '10px 16px',
+            fontSize: '14px',
+            maxWidth: '300px',
+            borderRadius: '8px',
+          },
+        }}
+      />
       <Navbar />
       <div className="min-h-screen bg-gray-50">
         <Routes>

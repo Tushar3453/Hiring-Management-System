@@ -9,6 +9,7 @@ import {
     Upload, X 
 } from 'lucide-react';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -54,7 +55,7 @@ const JobDetails = () => {
   // --- Toggle Save Handler ---
   const handleToggleSave = async () => {
     if (!auth?.user) {
-        alert("Please login to save jobs.");
+        toast.error("Please login to save jobs.");
         return;
     }
     try {
@@ -109,7 +110,7 @@ const JobDetails = () => {
   // --- INITIAL CLICK (Opens Modal) ---
   const handleApplyClick = () => {
     if (!auth?.user) {
-      alert("Please login to apply!");
+      toast.error("Please login to apply!");
       navigate('/login');
       return;
     }
@@ -129,13 +130,16 @@ const JobDetails = () => {
   const submitApplication = async () => {
     // Validation
     if (resumeType === 'profile' && !hasResume) {
-        const confirmUpload = confirm("No profile resume found. Go to profile to upload one?");
-        if (confirmUpload) navigate('/profile');
+        toast.error("No profile resume found. Redirecting to profile...");
+        setShowModal(false);
+        setTimeout(() => {
+            navigate('/profile');
+        }, 1000); // Give user a second to read the toast before redirecting
         return;
     }
 
     if (resumeType === 'upload' && !customFile) {
-        alert("Please select a file to upload.");
+        toast.error("Please select a file to upload.");
         return;
     }
 
@@ -146,12 +150,12 @@ const JobDetails = () => {
       
       await ApplicationService.applyJob(id!, fileToUpload);
       
-      alert("Application Submitted Successfully! 🚀");
+      toast.success("Application Submitted Successfully! 🚀");
       setHasApplied(true); 
       setShowModal(false);
       navigate('/my-applications'); 
     } catch (error: any) {
-      alert(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setApplying(false);
     }

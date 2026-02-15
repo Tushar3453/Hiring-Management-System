@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { io, Socket } from 'socket.io-client';
 import { AuthContext } from './AuthContext';
 import api from '../services/api'; 
+import toast from 'react-hot-toast';
 
 export interface Notification {
   id: string;
@@ -65,6 +66,14 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       // Listen for new notifications
       newSocket.on("receive_notification", (newNotif: Notification) => {
         setNotifications((prev) => [newNotif, ...prev]);
+        // Toast notifications
+        if (newNotif.type === 'success') {
+            toast.success(newNotif.message);
+        } else if (newNotif.type === 'error') {
+            toast.error(newNotif.message);
+        } else {
+            toast(newNotif.message, { icon: '🔔' }); 
+        }
       });
 
       return () => {
