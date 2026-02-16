@@ -9,8 +9,10 @@ import {
   Search, 
   Clock, 
   Filter,
-  Bookmark // <--- Imported Bookmark Icon
+  Bookmark
 } from 'lucide-react'; 
+import { motion } from 'framer-motion';
+import JobCardSkeleton from '../components/JobCardSkeleton'; 
 
 interface Job {
   id: string;
@@ -32,7 +34,7 @@ const StudentDashboard = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // --- NEW: State for Saved Jobs ---
+  // State for Saved Jobs
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
   // Search State
@@ -51,12 +53,10 @@ const StudentDashboard = () => {
     }
   };
 
-  // --- NEW: Fetch Saved Jobs IDs ---
   const fetchSavedJobs = async () => {
     if (!auth?.user) return;
     try {
       const savedData = await JobService.getSavedJobs();
-      // Extract IDs and store in a Set for O(1) lookup
       const ids = new Set<string>(savedData.map((job: any) => job.id as string));
       setSavedJobIds(ids);
     } catch (error) {
@@ -66,19 +66,16 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     fetchJobs();
-    fetchSavedJobs(); // <--- Call on mount
+    fetchSavedJobs();
   }, []);
 
-  // --- Handle Toggle Save ---
   const handleToggleSave = async (jobId: string) => {
     if (!auth?.user) {
       alert("Please login to save jobs.");
       return;
     }
-
     try {
       const response = await JobService.toggleSaveJob(jobId);
-      
       setSavedJobIds(prev => {
         const newSet = new Set(prev);
         if (response.isSaved) {
@@ -109,41 +106,53 @@ const StudentDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/50 font-sans">
       
       {/* === HEADER & SEARCH SECTION === */}
-      <div className="bg-white border-b border-gray-200 pt-12 pb-16 px-4 sm:px-8">
-        <div className="max-w-7xl mx-auto text-center">
+      <div className="relative bg-white border-b border-gray-200 pt-16 pb-20 px-4 sm:px-8 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-50/80 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#f8fafc_1px,transparent_1px),linear-gradient(to_bottom,#f8fafc_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70" />
+
+        <div className="max-w-7xl mx-auto text-center relative z-10">
           
-          <div className="mb-10">
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3">
-              Find your next <span className="text-blue-600">opportunity</span>
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="mb-10"
+          >
+            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
+              Find your next <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">opportunity</span>
             </h1>
-            <p className="text-lg text-gray-500">
-              Welcome back, <span className="font-semibold text-gray-900">{auth?.user?.firstName}</span>! 
-              We found <span className="font-semibold text-blue-600">{jobs.length}</span> new jobs for you.
+            <p className="text-lg text-gray-500 font-medium max-w-2xl mx-auto">
+              Welcome back, <span className="font-bold text-gray-900">{auth?.user?.firstName}</span>! 
+              We found <span className="font-bold text-blue-600 px-1">{jobs.length}</span> new jobs for you.
             </p>
-          </div>
+          </motion.div>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="max-w-4xl mx-auto bg-white p-2 rounded-2xl shadow-xl border border-gray-100 flex flex-col md:flex-row gap-2 ring-1 ring-gray-100/50">
-            <div className="flex-1 flex items-center px-4 h-14 bg-gray-50 rounded-xl border border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all text-left">
+          <motion.form 
+            initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+            onSubmit={handleSearch} 
+            className="max-w-4xl mx-auto bg-white p-2 rounded-2xl shadow-xl shadow-blue-900/5 border border-gray-100 flex flex-col md:flex-row gap-2 ring-1 ring-gray-100/50 focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-50 transition-all"
+          >
+            <div className="flex-1 flex items-center px-4 h-14 bg-transparent rounded-xl transition-all text-left">
               <Search className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
               <input 
                 type="text" 
                 placeholder="Job title, keywords..." 
-                className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 font-medium"
+                className="w-full bg-transparent outline-none text-gray-900 placeholder-gray-400 font-medium"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
             
-            <div className="flex-1 flex items-center px-4 h-14 bg-gray-50 rounded-xl border border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all text-left">
+            <div className="hidden md:block w-[1px] bg-gray-100 my-2"></div>
+
+            <div className="flex-1 flex items-center px-4 h-14 bg-transparent rounded-xl transition-all text-left">
               <MapPin className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
               <input 
                 type="text" 
                 placeholder="City (e.g. Bangalore)" 
-                className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 font-medium"
+                className="w-full bg-transparent outline-none text-gray-900 placeholder-gray-400 font-medium"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               />
@@ -151,39 +160,44 @@ const StudentDashboard = () => {
 
             <button 
               type="submit" 
-              className="h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
+              className="h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 whitespace-nowrap active:scale-95"
             >
               Search
             </button>
-          </form>
+          </motion.form>
 
         </div>
       </div>
 
       {/* === JOBS GRID SECTION === */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mb-20">
         
         {/* Filter Row */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Recommended Jobs</h2>
-          <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm font-medium bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm transition-colors hover:bg-gray-50">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Recommended Jobs</h2>
+          <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 text-sm font-semibold bg-white px-5 py-2.5 rounded-xl border border-gray-200 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 active:scale-95">
             <Filter className="w-4 h-4" /> Filters
           </button>
         </div>
 
         {loading ? (
+          // === SKELETON LOADERS (3 Columns) ===
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-             {[1,2,3].map(i => (
-               <div key={i} className="h-64 bg-gray-200 rounded-xl animate-pulse"></div>
+             {[1,2,3,4,5,6].map(i => (
+               <JobCardSkeleton key={i} />
              ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {jobs.length > 0 ? (
-              jobs.map((job) => (
-                <div 
+              jobs.map((job, index) => (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
                   key={job.id} 
-                  className="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full"
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  className="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full cursor-pointer"
                 >
                   <div>
                     <div className="flex justify-between items-start mb-4">
@@ -200,32 +214,32 @@ const StudentDashboard = () => {
                         </div>
                       </div>
 
-                      {/* --- Bookmark Button --- */}
+                      {/* Bookmark Button */}
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleSave(job.id);
                         }}
-                        className="text-gray-400 hover:text-blue-600 transition p-1"
+                        className="text-gray-300 hover:text-blue-600 transition p-1.5 rounded-lg hover:bg-blue-50 shrink-0"
                         title={savedJobIds.has(job.id) ? "Remove from Saved" : "Save Job"}
                       >
                         <Bookmark 
-                          className={`w-6 h-6 ${savedJobIds.has(job.id) ? 'fill-blue-600 text-blue-600' : ''}`} 
+                          className={`w-5 h-5 ${savedJobIds.has(job.id) ? 'fill-blue-600 text-blue-600' : ''}`} 
                         />
                       </button>
                     </div>
 
                     {/* Job Details Tags */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                         <MapPin className="w-3 h-3" /> {job.location}
-                       </span>
-                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                         <IndianRupee className="w-3 h-3" /> {formatSalary(job.minSalary, job.maxSalary)}
-                       </span>
-                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                         <Briefcase className="w-3 h-3" /> {job.jobType || 'Full Time'}
-                       </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                        <MapPin className="w-3 h-3" /> {job.location}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                        <IndianRupee className="w-3 h-3" /> {formatSalary(job.minSalary, job.maxSalary)}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                        <Briefcase className="w-3 h-3" /> {job.jobType || 'Full Time'}
+                      </span>
                     </div>
 
                     <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed">
@@ -240,30 +254,33 @@ const StudentDashboard = () => {
                     </span>
                     
                     <button 
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                      className="text-sm font-semibold text-blue-600 hover:text-white hover:bg-blue-600 px-5 py-2 rounded-lg transition-all border border-blue-100 hover:border-transparent hover:shadow-md"
+                      className="text-sm font-semibold text-blue-600 group-hover:text-white group-hover:bg-blue-600 px-5 py-2 rounded-lg transition-all border border-blue-100 group-hover:border-transparent group-hover:shadow-md"
                     >
                       View Details
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))
             ) : (
-              <div className="col-span-full py-20 text-center">
-                <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-100">
-                   <Briefcase className="w-10 h-10 text-gray-300" />
+              // Enhanced Empty State
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="col-span-full py-24 text-center bg-white rounded-3xl border border-gray-100 shadow-sm"
+              >
+                <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
+                   <Search className="w-10 h-10 text-gray-300" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">No Jobs Found</h3>
-                <p className="text-gray-500 mt-1 max-w-sm mx-auto">
-                  Try adjusting your search criteria.
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs matched your search</h3>
+                <p className="text-gray-500 max-w-sm mx-auto font-medium mb-6">
+                  Try adjusting your keywords or location to find more opportunities.
                 </p>
                 <button 
                   onClick={() => {setQuery(''); setLocation(''); fetchJobs();}}
-                  className="mt-4 text-blue-600 font-medium hover:underline"
+                  className="px-6 py-2.5 bg-white text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm hover:bg-gray-50 hover:text-blue-600 transition-all"
                 >
                   Clear Filters
                 </button>
-              </div>
+              </motion.div>
             )}
           </div>
         )}
