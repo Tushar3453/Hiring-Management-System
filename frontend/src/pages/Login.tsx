@@ -1,7 +1,9 @@
 import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, LogIn } from 'lucide-react'; 
+import { Mail, Lock, ArrowRight } from 'lucide-react'; 
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import api from '../services/api'; 
 
 const Login = () => {
@@ -17,60 +19,71 @@ const Login = () => {
     try {
       const res = await api.post('/auth/login', { email, password });
       auth?.login(res.data.user, res.data.token);
+      
+      toast.success(`Welcome back, ${res.data.user.firstName}!`);
+      
       if (res.data.user.role === 'RECRUITER') {
         navigate('/recruiter-dashboard');
       } else {
         navigate('/student-dashboard');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || "Invalid Credentials");
+      toast.error(err.response?.data?.message || "Invalid Email or Password");
       setLoading(false);
     }
   };
 
+  const inputClasses = "w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-4 py-3.5 text-sm font-medium text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-300 outline-none transition-all shadow-sm";
+  const iconClasses = "absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400";
+
   return (
-    <div className="flex justify-center bg-gray-50 pt-16 sm:pt-24 px-4 pb-12">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="p-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden selection:bg-blue-100 selection:text-blue-900">
+      
+      {/* Background Decor */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-50/80 rounded-full blur-[120px] pointer-events-none" />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        className="max-w-md w-full bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden relative z-10"
+      >
+        {/* Top Gradient Bar */}
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
+
+        <div className="p-8 md:p-10">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-extrabold text-gray-900">Welcome Back!</h2>
-            <p className="text-sm text-gray-600 mt-2">Please sign in to your account</p>
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Welcome Back</h2>
+            <p className="text-sm font-medium text-gray-500 mt-2">Please sign in to your account</p>
           </div>
           
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email Field with Icon */}
+          <form onSubmit={handleLogin} className="space-y-5">
+            
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
-              </div>
+              <Mail className={iconClasses} />
               <input 
                 type="email" 
                 placeholder="Email Address" 
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                className={inputClasses}
                 onChange={(e) => setEmail(e.target.value)}
                 required 
               />
             </div>
 
-            {/* Password Field with Icon */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
-              </div>
+              <Lock className={iconClasses} />
               <input 
                 type="password" 
                 placeholder="Password" 
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                className={inputClasses}
                 onChange={(e) => setPassword(e.target.value)}
                 required 
               />
             </div>
 
             {/* Forgot Password Link */}
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-1 pb-2">
               <Link 
                 to="/forgot-password" 
-                className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline"
+                className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors"
               >
                 Forgot Password?
               </Link>
@@ -79,18 +92,23 @@ const Login = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-300 transition-all flex items-center justify-center space-x-2 disabled:opacity-70"
+              className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 active:scale-[0.98]"
             >
-              {loading ? 'Signing In...' : <><LogIn className="w-5 h-5" /> <span>Login</span></>}
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><span>Log In</span> <ArrowRight className="w-5 h-5" /></>
+              )}
             </button>
           </form>
         </div>
-        <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account? <Link to="/signup" className="text-blue-600 hover:underline font-medium">Sign up</Link>
+        
+        <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 text-center">
+          <p className="text-sm font-medium text-gray-600">
+            Don't have an account? <Link to="/signup" className="text-blue-600 hover:text-blue-800 font-bold ml-1 transition-colors">Sign up</Link>
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -2,22 +2,26 @@ import { useEffect, useState, useContext } from 'react';
 import * as UserService from '../services/user.service';
 import { AuthContext } from '../context/AuthContext';
 import {
-  User, MapPin, Globe, Linkedin, Github,
-  Briefcase, GraduationCap, Edit2, Save, X
+  MapPin, Globe, Linkedin, Github,
+  Briefcase, GraduationCap, Edit2, Save, X, FileText,
+  Building, Sparkles, Ban 
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 const Profile = () => {
-  const auth = useContext(AuthContext); // ✅ Auth Context access kiya
+  const auth = useContext(AuthContext); 
   const [profile, setProfile] = useState<UserService.UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Edit Mode Logic
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserService.UserProfile>>({});
 
-  // Load Data on Mount
   useEffect(() => {
+    window.scrollTo(0, 0);
     fetchProfile();
   }, []);
 
@@ -27,32 +31,29 @@ const Profile = () => {
       setProfile(data);
       setFormData(data);
       
-      // Update global auth state
       if (auth) auth.updateUser(data);
     } catch (error) {
       console.error("Failed to load profile", error);
+      toast.error("Failed to load profile details.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle Input Changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Special Handler for Skills (Comma separated string to Array)
   const handleSkillsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const skillsArray = e.target.value.split(',').map(skill => skill.trim());
     setFormData({ ...formData, skills: skillsArray });
   };
 
-  // Save Changes
   const handleSave = async () => {
+    setSaving(true);
     try {
       const data = new FormData();
 
-      // append all text fields
       Object.keys(formData).forEach(key => {
         const value = (formData as any)[key];
         if (value !== null && value !== undefined) {
@@ -70,21 +71,21 @@ const Profile = () => {
 
       await UserService.updateProfile(data);
 
-      // refresh profile data from backend
       const updatedProfile = await UserService.getProfile();
       setProfile(updatedProfile);
       
-      // Update global auth state
       if (auth) {
         auth.updateUser(updatedProfile);
       }
 
       setIsEditing(false);
       setResumeFile(null);
-      alert("Profile Updated Successfully!");
+      toast.success("Profile Updated Successfully!");
     } catch (error) {
       console.error(error);
-      alert("Error updating profile");
+      toast.error("Error updating profile");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -94,190 +95,240 @@ const Profile = () => {
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Loading Profile...</div>;
-  if (!profile) return <div className="p-10 text-center text-red-500">Error loading profile</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 animate-pulse">
+        <div className="md:col-span-1 space-y-6">
+           <div className="bg-white rounded-3xl border border-gray-100 h-80"></div>
+           <div className="bg-white rounded-3xl border border-gray-100 h-48"></div>
+        </div>
+        <div className="md:col-span-2">
+           <div className="bg-white rounded-3xl border border-gray-100 h-[600px]"></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!profile) return <div className="p-10 text-center text-red-500 font-bold">Error loading profile</div>;
 
   const isStudent = profile.role === 'STUDENT';
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans pb-20 selection:bg-blue-100 selection:text-blue-900 relative">
+      
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-blue-50/80 to-transparent pointer-events-none" />
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8">
 
         {/* === LEFT COLUMN: Identity Card === */}
         <div className="md:col-span-1 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl font-bold text-blue-600">
-                {profile.firstName?.[0]}{profile.lastName?.[0]}
-              </span>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden text-center relative">
+            
+            {/* Banner Cover */}
+            <div className="h-24 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+
+            {/* Overlapping Avatar */}
+            <div className="relative -mt-12 mb-4">
+              <div className="w-24 h-24 bg-white rounded-2xl mx-auto p-1 shadow-md">
+                <div className="w-full h-full bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100">
+                  <span className="text-3xl font-extrabold text-blue-600">
+                    {profile.firstName?.[0]}{profile.lastName?.[0]}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900">{profile.firstName} {profile.lastName}</h2>
-            <p className="text-sm text-gray-500 font-medium mt-1">{isStudent ? 'Student' : 'Recruiter'}</p>
+            <div className="px-6 pb-6">
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">{profile.firstName} {profile.lastName}</h2>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold bg-gray-50 text-gray-500 mt-2 uppercase tracking-wider border border-gray-100">
+                {isStudent ? <GraduationCap className="w-3.5 h-3.5" /> : <Briefcase className="w-3.5 h-3.5" />} 
+                {isStudent ? 'Student Account' : 'Recruiter Account'}
+              </div>
 
-            <div className="flex items-center justify-center gap-2 mt-4 text-gray-600">
-              <MapPin className="w-4 h-4" />
-              {isEditing ? (
-                <input
-                  name="location"
-                  value={formData.location || ''}
-                  onChange={handleChange}
-                  placeholder="City, Country"
-                  className="border rounded px-2 py-1 text-sm w-full"
-                />
-              ) : (
-                <span>{profile.location || 'Add Location'}</span>
-              )}
+              <div className="flex items-center justify-center gap-2 mt-4 text-sm font-medium text-gray-500">
+                <MapPin className="w-4 h-4 text-gray-400" />
+                {isEditing ? (
+                  <input
+                    name="location"
+                    value={formData.location || ''}
+                    onChange={handleChange}
+                    placeholder="City, Country"
+                    className="border-b-2 border-gray-200 focus:border-blue-500 px-1 py-0.5 outline-none bg-transparent text-center text-gray-900 transition-colors w-full"
+                  />
+                ) : (
+                  <span>{profile.location || 'Add Location'}</span>
+                )}
+              </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900">Social Links</h3>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h3 className="font-bold text-gray-900 mb-2">Social Links</h3>
 
             <div className="flex items-center gap-3 text-sm">
-              <Globe className="w-4 h-4 text-gray-400" />
+              <div className="p-2 bg-gray-50 rounded-lg text-gray-400"><Globe className="w-4 h-4" /></div>
               {isEditing ? (
-                <input name="website" value={formData.website || ''} onChange={handleChange} placeholder="Portfolio URL" className="border rounded px-2 py-1 flex-1" />
+                <input name="website" value={formData.website || ''} onChange={handleChange} placeholder="Portfolio URL" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-gray-900" />
               ) : profile.website ? (
-                <a href={profile.website} target="_blank" className="text-blue-600 hover:underline truncate">{profile.website}</a>
-              ) : <span className="text-gray-400">Not added</span>}
+                <a href={profile.website} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium truncate">{profile.website}</a>
+              ) : <span className="text-gray-400 font-medium">Not added</span>}
             </div>
 
             <div className="flex items-center gap-3 text-sm">
-              <Linkedin className="w-4 h-4 text-gray-400" />
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-500"><Linkedin className="w-4 h-4" /></div>
               {isEditing ? (
-                <input name="linkedin" value={formData.linkedin || ''} onChange={handleChange} placeholder="LinkedIn URL" className="border rounded px-2 py-1 flex-1" />
+                <input name="linkedin" value={formData.linkedin || ''} onChange={handleChange} placeholder="LinkedIn URL" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-gray-900" />
               ) : profile.linkedin ? (
-                <a href={profile.linkedin} target="_blank" className="text-blue-600 hover:underline truncate">LinkedIn Profile</a>
-              ) : <span className="text-gray-400">Not added</span>}
+                <a href={profile.linkedin} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium truncate">LinkedIn Profile</a>
+              ) : <span className="text-gray-400 font-medium">Not added</span>}
             </div>
 
             {isStudent && (
               <div className="flex items-center gap-3 text-sm">
-                <Github className="w-4 h-4 text-gray-400" />
+                <div className="p-2 bg-gray-100 rounded-lg text-gray-700"><Github className="w-4 h-4" /></div>
                 {isEditing ? (
-                  <input name="github" value={formData.github || ''} onChange={handleChange} placeholder="Github URL" className="border rounded px-2 py-1 flex-1" />
+                  <input name="github" value={formData.github || ''} onChange={handleChange} placeholder="Github URL" className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-gray-900" />
                 ) : profile.github ? (
-                  <a href={profile.github} target="_blank" className="text-blue-600 hover:underline truncate">Github Profile</a>
-                ) : <span className="text-gray-400">Not added</span>}
+                  <a href={profile.github} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium truncate">Github Profile</a>
+                ) : <span className="text-gray-400 font-medium">Not added</span>}
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
 
         {/* === RIGHT COLUMN: Details === */}
         <div className="md:col-span-2 space-y-6">
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 relative">
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 relative">
-
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-8 pb-6 border-b border-gray-100">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">About</h1>
-                <p className="text-gray-500">Manage your professional information</p>
+                <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Profile Details</h1>
+                <p className="text-gray-500 font-medium mt-1">Manage your professional information</p>
               </div>
 
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors font-medium"
+                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-600 px-5 py-2.5 rounded-xl transition-all font-bold shadow-sm active:scale-95"
                 >
-                  <Edit2 className="w-4 h-4" /> Edit
+                  <Edit2 className="w-4 h-4" /> Edit Profile
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <button onClick={() => setIsEditing(false)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><X className="w-5 h-5" /></button>
-                  <button onClick={handleSave} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" /> Save</button>
+                  <button onClick={() => setIsEditing(false)} disabled={saving} className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors border border-transparent hover:border-red-100 disabled:opacity-50"><X className="w-5 h-5" /></button>
+                  <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 active:scale-95 disabled:opacity-50">
+                    <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save'}
+                  </button>
                 </div>
               )}
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-8">
 
+              {/* Bio Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">
+                  <FileText className="w-4 h-4 text-gray-400"/> Bio
+                </label>
                 {isEditing ? (
                   <textarea
                     name="bio"
                     value={formData.bio || ''}
                     onChange={handleChange}
                     rows={4}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-100 outline-none"
-                    placeholder="Tell us about yourself..."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 focus:ring-4 focus:ring-blue-50 focus:border-blue-300 outline-none transition-all text-gray-900 font-medium resize-none"
+                    placeholder="Write a short professional bio about yourself..."
                   />
                 ) : (
-                  <p className="text-gray-600 leading-relaxed">{profile.bio || 'No bio added yet.'}</p>
+                  <p className="text-gray-600 font-medium leading-relaxed bg-gray-50/50 p-5 rounded-xl border border-gray-100">
+                    {profile.bio || 'No bio added yet. Tell recruiters about your journey!'}
+                  </p>
                 )}
               </div>
 
+              {/* Professional Details Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {isStudent ? (
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                      <GraduationCap className="w-4 h-4" /> Institution
+                    <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">
+                      <GraduationCap className="w-4 h-4 text-gray-400" /> Institution
                     </label>
                     {isEditing ? (
-                      <input name="institutionName" value={formData.institutionName || ''} onChange={handleChange} className="w-full border rounded-lg p-2" />
-                    ) : <p className="text-gray-900">{profile.institutionName || 'N/A'}</p>}
+                      <input name="institutionName" value={formData.institutionName || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-300 transition-all text-gray-900 font-medium" placeholder="E.g. IIT Delhi" />
+                    ) : (
+                      <p className="text-gray-900 font-bold text-lg">{profile.institutionName || <span className="text-gray-400 font-medium text-base">Not specified</span>}</p>
+                    )}
                   </div>
                 ) : (
                   <>
                     <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <Briefcase className="w-4 h-4" /> Company
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">
+                        <Building className="w-4 h-4 text-gray-400" /> Company
                       </label>
                       {isEditing ? (
-                        <input name="companyName" value={formData.companyName || ''} onChange={handleChange} className="w-full border rounded-lg p-2" />
-                      ) : <p className="text-gray-900">{profile.companyName || 'N/A'}</p>}
+                        <input name="companyName" value={formData.companyName || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-300 transition-all text-gray-900 font-medium" />
+                      ) : <p className="text-gray-900 font-bold text-lg">{profile.companyName || <span className="text-gray-400 font-medium text-base">Not specified</span>}</p>}
                     </div>
                     <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <User className="w-4 h-4" /> Designation
+                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">
+                        <Briefcase className="w-4 h-4 text-gray-400" /> Designation
                       </label>
                       {isEditing ? (
-                        <input name="designation" value={formData.designation || ''} onChange={handleChange} className="w-full border rounded-lg p-2" />
-                      ) : <p className="text-gray-900">{profile.designation || 'N/A'}</p>}
+                        <input name="designation" value={formData.designation || ''} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-300 transition-all text-gray-900 font-medium" />
+                      ) : <p className="text-gray-900 font-bold text-lg">{profile.designation || <span className="text-gray-400 font-medium text-base">Not specified</span>}</p>}
                     </div>
                   </>
                 )}
               </div>
 
+              {/* Skills Section */}
               {isStudent && (
-                <div className="pt-4 border-t border-gray-100">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Skills</label>
+                <div className="pt-6 border-t border-gray-100">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">
+                    <Sparkles className="w-4 h-4 text-gray-400" /> Skills
+                  </label>
                   {isEditing ? (
                     <div>
                       <input
                         name="skills"
                         value={formData.skills?.join(', ') || ''}
                         onChange={handleSkillsChange}
-                        placeholder="React, Node.js, Python (comma separated)"
-                        className="w-full border border-gray-300 rounded-lg p-3"
+                        placeholder="E.g. React, Node.js, Python (comma separated)"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-300 transition-all text-gray-900 font-medium"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Separate skills with commas</p>
+                      <p className="text-xs font-semibold text-gray-400 mt-2 ml-1">Separate skills with commas</p>
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {profile.skills && profile.skills.length > 0 ? (
                         profile.skills.map((skill, index) => (
-                          <span key={index} className="px-3 py-1 bg-blue-50 text-blue-600 text-sm font-medium rounded-full">
+                          <span key={index} className="px-3 py-1.5 bg-blue-50 border border-blue-100 text-blue-700 text-sm font-bold rounded-lg shadow-sm">
                             {skill}
                           </span>
                         ))
-                      ) : <span className="text-gray-400 text-sm">No skills added</span>}
+                      ) : <span className="text-gray-400 text-sm font-medium bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">No skills added yet</span>}
                     </div>
                   )}
                 </div>
               )}
+
+              {/* Resume Section */}
               {isStudent && (
-                <div className="pt-4 border-t border-gray-100">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Resume</label>
+                <div className="pt-6 border-t border-gray-100">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">
+                    <FileText className="w-4 h-4 text-gray-400" /> Default Resume
+                  </label>
                   {isEditing ? (
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={handleFileChange}
-                      className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                    />
+                    <div className="relative group cursor-pointer">
+                       <input
+                         type="file"
+                         accept=".pdf"
+                         onChange={handleFileChange}
+                         className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:transition-colors file:cursor-pointer border border-dashed border-gray-300 rounded-2xl p-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                       />
+                       {resumeFile && <p className="text-xs text-green-600 font-bold mt-2 ml-2">Selected: {resumeFile.name}</p>}
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       {profile.resumeUrl ? (
@@ -285,12 +336,14 @@ const Profile = () => {
                           href={profile.resumeUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm font-medium"
+                          className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 px-5 py-3 rounded-xl transition-all font-bold shadow-sm"
                         >
-                          View Resume
+                          <FileText className="w-4 h-4" /> View Current Resume
                         </a>
                       ) : (
-                        <span className="text-gray-400 text-sm">No resume uploaded</span>
+                        <span className="flex items-center gap-2 text-gray-400 text-sm font-medium bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
+                          <Ban className="w-4 h-4"/> No resume uploaded
+                        </span>
                       )}
                     </div>
                   )}
@@ -298,7 +351,7 @@ const Profile = () => {
               )}
 
             </div>
-          </div>
+          </motion.div>
         </div>
 
       </div>
