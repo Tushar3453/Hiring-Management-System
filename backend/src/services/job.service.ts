@@ -30,38 +30,63 @@ export const createJob = async (jobData: any, recruiterId: string) => {
     });
 };
 
-// get all jobs with search and filter
-export const getAllJobs = async (query?: string, location?: string, jobType?: string, experienceLevel?: string) => {
-    return await prisma.job.findMany({
-        where: {
-            AND: [
-                { isOpen: true },
-                // if query is present then search in title and companyName
-                query ? {
-                    OR: [
-                        { title: { contains: query, mode: 'insensitive' } },
-                        { companyName: { contains: query, mode: 'insensitive' } },
-                    ]
-                } : {},
-                // if location is present then search in location
-                location ? {
-                    location: { contains: location, mode: 'insensitive' }
-                } : {},
-                jobType ? {
-                    jobType: { equals: jobType, mode: 'insensitive' }
-                } : {},
-                experienceLevel ? {
-                    experienceLevel: { equals: experienceLevel, mode: 'insensitive' }
-                } : {}
-            ]
-        },
-        orderBy: { createdAt: 'desc' },
-        include: {
-            recruiter: {
-                select: { firstName: true, email: true }
+/// GET ALL JOBS (With Filters & Pagination)
+export const getAllJobs = async (
+    query?: string,
+    location?: string,
+    jobType?: string,
+    experienceLevel?: string,
+    page: number = 1,
+    limit: number = 6
+) => {
+    const skip = (page - 1) * limit;
+    const whereClause: any = { isOpen: true }; // only opened jobs
+
+    if (query) {
+        whereClause.OR = [
+            { title: { contains: query, mode: 'insensitive' } },
+            { companyName: { contains: query, mode: 'insensitive' } }
+        ];
+    }
+
+    if (location) {
+        whereClause.location = { contains: location, mode: 'insensitive' };
+    }
+
+    if (jobType) {
+        whereClause.jobType = jobType;
+    }
+
+    if (experienceLevel) {
+        whereClause.experienceLevel = experienceLevel;
+    }
+
+    // Run both queries concurrently for better performance
+    const [jobs, totalJobs] = await Promise.all([
+        prisma.job.findMany({
+            where: whereClause,
+            skip: skip,
+            take: limit,
+            orderBy: { createdAt: 'desc' }, // Latest jobs first
+            include: {
+                recruiter: {
+                    select: { email: true, firstName: true, lastName: true }
+                }
             }
+        }),
+        prisma.job.count({ where: whereClause })
+    ]);
+
+    // Return jobs along with pagination metadata
+    return {
+        jobs,
+        meta: {
+            totalJobs,
+            totalPages: Math.ceil(totalJobs / limit),
+            currentPage: page,
+            hasNextPage: skip + limit < totalJobs
         }
-    });
+    };
 };
 
 // get job by id

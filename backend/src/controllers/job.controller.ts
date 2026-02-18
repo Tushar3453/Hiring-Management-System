@@ -26,8 +26,11 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
     const location = req.query.location as string | undefined;
     const jobType = req.query.jobType as string | undefined;
     const experienceLevel = req.query.experienceLevel as string | undefined;
+    // --- Pagination Params ---
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 6; 
 
-    const jobs = await JobService.getAllJobs(query, location, jobType, experienceLevel);
+    const jobs = await JobService.getAllJobs(query, location, jobType, experienceLevel, page, limit);
     res.status(200).json(jobs);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

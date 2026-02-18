@@ -9,7 +9,9 @@ import {
   Search, 
   Clock, 
   Filter,
-  Bookmark
+  Bookmark,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'; 
 import { motion } from 'framer-motion';
 import JobCardSkeleton from '../components/JobCardSkeleton'; 
@@ -34,6 +36,11 @@ const StudentDashboard = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // === PAGINATION STATES ===
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+
   // State for Saved Jobs
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
@@ -41,11 +48,18 @@ const StudentDashboard = () => {
   const [query, setQuery] = useState(searchParams.get('query') || '');
   const [location, setLocation] = useState(searchParams.get('location') || '');
 
-  const fetchJobs = async () => {
+  const loadJobs = async (pageNum: number) => {
     setLoading(true);
     try {
-      const data = await JobService.getAllJobs(query, location);
-      setJobs(data);
+      const data = await JobService.getAllJobs(query, location, pageNum);
+      
+      setJobs(data.jobs); 
+      setTotalJobs(data.meta.totalJobs); 
+      setTotalPages(data.meta.totalPages);
+      setPage(pageNum);
+      
+      // Smooth scroll to top when page changes
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error("Error fetching jobs:", error);
     } finally {
@@ -65,7 +79,7 @@ const StudentDashboard = () => {
   };
 
   useEffect(() => {
-    fetchJobs();
+    loadJobs(1);
     fetchSavedJobs();
   }, []);
 
@@ -92,7 +106,7 @@ const StudentDashboard = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchJobs();
+    loadJobs(1); // Search hamesha page 1 se start hoga
   };
 
   const formatSalary = (min: number, max: number) => {
@@ -103,6 +117,60 @@ const StudentDashboard = () => {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Pagination UI Generator (To show max 5 page numbers)
+  const renderPaginationButtons = () => {
+    if (totalPages <= 1) return null;
+
+    const pageNumbers = [];
+    let startPage = Math.max(1, page - 2);
+    let endPage = Math.min(totalPages, page + 2);
+
+    if (page <= 3) {
+      endPage = Math.min(5, totalPages);
+    }
+    if (page >= totalPages - 2) {
+      startPage = Math.max(1, totalPages - 4);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(
+        <button
+          key={i}
+          onClick={() => loadJobs(i)}
+          className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold transition-all ${
+            page === i
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-blue-300'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="mt-12 flex justify-center items-center gap-2">
+        <button
+          onClick={() => loadJobs(page - 1)}
+          disabled={page === 1}
+          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        
+        {pageNumbers}
+
+        <button
+          onClick={() => loadJobs(page + 1)}
+          disabled={page === totalPages}
+          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -124,7 +192,7 @@ const StudentDashboard = () => {
             </h1>
             <p className="text-lg text-gray-500 font-medium max-w-2xl mx-auto">
               Welcome back, <span className="font-bold text-gray-900">{auth?.user?.firstName}</span>! 
-              We found <span className="font-bold text-blue-600 px-1">{jobs.length}</span> new jobs for you.
+              We found <span className="font-bold text-blue-600 px-1">{totalJobs}</span> new jobs for you.
             </p>
           </motion.div>
 
@@ -183,106 +251,106 @@ const StudentDashboard = () => {
         {loading ? (
           // === SKELETON LOADERS (3 Columns) ===
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-             {[1,2,3,4,5,6].map(i => (
+             {[1,2,3,4,5,6,7,8,9].map(i => (
                <JobCardSkeleton key={i} />
              ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {jobs.length > 0 ? (
-              jobs.map((job, index) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  key={job.id} 
-                  onClick={() => navigate(`/jobs/${job.id}`)}
-                  className="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full cursor-pointer"
-                >
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      {/* Company Info */}
-                      <div className="flex gap-4">
-                        <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
-                          {job.companyName.charAt(0)}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {jobs.length > 0 ? (
+                jobs.map((job, index) => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    key={job.id} 
+                    onClick={() => navigate(`/jobs/${job.id}`)}
+                    className="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full cursor-pointer"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex gap-4">
+                          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
+                            {job.companyName.charAt(0)}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                              {job.title}
+                            </h3>
+                            <p className="text-sm font-medium text-gray-500">{job.companyName}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                            {job.title}
-                          </h3>
-                          <p className="text-sm font-medium text-gray-500">{job.companyName}</p>
-                        </div>
+
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSave(job.id);
+                          }}
+                          className="text-gray-300 hover:text-blue-600 transition p-1.5 rounded-lg hover:bg-blue-50 shrink-0"
+                          title={savedJobIds.has(job.id) ? "Remove from Saved" : "Save Job"}
+                        >
+                          <Bookmark 
+                            className={`w-5 h-5 ${savedJobIds.has(job.id) ? 'fill-blue-600 text-blue-600' : ''}`} 
+                          />
+                        </button>
                       </div>
 
-                      {/* Bookmark Button */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                          <MapPin className="w-3 h-3" /> {job.location}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                          <IndianRupee className="w-3 h-3" /> {formatSalary(job.minSalary, job.maxSalary)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                          <Briefcase className="w-3 h-3" /> {job.jobType || 'Full Time'}
+                        </span>
+                      </div>
+
+                      <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed">
+                        {job.description}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
+                      <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {formatTime(job.createdAt)}
+                      </span>
+                      
                       <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleSave(job.id);
-                        }}
-                        className="text-gray-300 hover:text-blue-600 transition p-1.5 rounded-lg hover:bg-blue-50 shrink-0"
-                        title={savedJobIds.has(job.id) ? "Remove from Saved" : "Save Job"}
+                        className="text-sm font-semibold text-blue-600 group-hover:text-white group-hover:bg-blue-600 px-5 py-2 rounded-lg transition-all border border-blue-100 group-hover:border-transparent group-hover:shadow-md"
                       >
-                        <Bookmark 
-                          className={`w-5 h-5 ${savedJobIds.has(job.id) ? 'fill-blue-600 text-blue-600' : ''}`} 
-                        />
+                        View Details
                       </button>
                     </div>
-
-                    {/* Job Details Tags */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                        <MapPin className="w-3 h-3" /> {job.location}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                        <IndianRupee className="w-3 h-3" /> {formatSalary(job.minSalary, job.maxSalary)}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                        <Briefcase className="w-3 h-3" /> {job.jobType || 'Full Time'}
-                      </span>
-                    </div>
-
-                    <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed">
-                      {job.description}
-                    </p>
-                  </div>
-
-                  {/* Footer Actions */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
-                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {formatTime(job.createdAt)}
-                    </span>
-                    
-                    <button 
-                      className="text-sm font-semibold text-blue-600 group-hover:text-white group-hover:bg-blue-600 px-5 py-2 rounded-lg transition-all border border-blue-100 group-hover:border-transparent group-hover:shadow-md"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </motion.div>
-              ))
-            ) : (
-              // Enhanced Empty State
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                className="col-span-full py-24 text-center bg-white rounded-3xl border border-gray-100 shadow-sm"
-              >
-                <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
-                   <Search className="w-10 h-10 text-gray-300" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs matched your search</h3>
-                <p className="text-gray-500 max-w-sm mx-auto font-medium mb-6">
-                  Try adjusting your keywords or location to find more opportunities.
-                </p>
-                <button 
-                  onClick={() => {setQuery(''); setLocation(''); fetchJobs();}}
-                  className="px-6 py-2.5 bg-white text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm hover:bg-gray-50 hover:text-blue-600 transition-all"
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                  className="col-span-full py-24 text-center bg-white rounded-3xl border border-gray-100 shadow-sm"
                 >
-                  Clear Filters
-                </button>
-              </motion.div>
-            )}
-          </div>
+                  <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
+                     <Search className="w-10 h-10 text-gray-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs matched your search</h3>
+                  <p className="text-gray-500 max-w-sm mx-auto font-medium mb-6">
+                    Try adjusting your keywords or location to find more opportunities.
+                  </p>
+                  <button 
+                    onClick={() => {setQuery(''); setLocation(''); loadJobs(1);}}
+                    className="px-6 py-2.5 bg-white text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm hover:bg-gray-50 hover:text-blue-600 transition-all"
+                  >
+                    Clear Filters
+                  </button>
+                </motion.div>
+              )}
+            </div>
+
+            {/* === NUMBERED PAGINATION === */}
+            {renderPaginationButtons()}
+          </>
         )}
       </div>
     </div>

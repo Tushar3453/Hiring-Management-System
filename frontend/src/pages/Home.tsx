@@ -62,10 +62,12 @@ const Home = () => {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const data = await JobService.getAllJobs();
-        setFeaturedJobs(data.slice(0, 3)); // Slice to 3 to match dashboard grid structure
+        // Correctly handling the paginated response format
+        const data = await JobService.getAllJobs('', '', 1, 3);
+        setFeaturedJobs(data.jobs); // Extracting .jobs array from response object
       } catch (error) {
-        console.log("Using dummy data for home page preview");
+        console.error("Failed to fetch real jobs:", error);
+        // Fallback fake data just in case server is down
         setFeaturedJobs([
           {
             id: '1',
@@ -173,6 +175,7 @@ const Home = () => {
                   placeholder="Job title, keywords..."
                   className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 font-medium"
                   value={query} onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
 
@@ -183,6 +186,7 @@ const Home = () => {
                   placeholder="Location"
                   className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 font-medium"
                   value={location} onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
               <button
@@ -278,7 +282,7 @@ const Home = () => {
                       {/* Company Info */}
                       <div className="flex gap-4">
                         <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
-                          {job.companyName.charAt(0)}
+                          {job.companyName ? job.companyName.charAt(0) : 'C'}
                         </div>
                         <div>
                           <h3 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">

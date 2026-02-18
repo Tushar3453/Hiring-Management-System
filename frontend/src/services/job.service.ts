@@ -28,10 +28,12 @@ export const postJob = async (jobData: JobData) => {
 };
 
 // Get All Jobs (Student)
-export const getAllJobs = async (query?: string, location?: string) => {
+export const getAllJobs = async (query?: string, location?: string, page: number = 1, limit: number = 9) => {
   const params = new URLSearchParams();
   if (query) params.append('query', query);
   if (location) params.append('location', location);
+  params.append('page', page.toString());
+  params.append('limit', limit.toString());
 
   const response = await api.get(`/jobs?${params.toString()}`);
   return response.data;
