@@ -45,6 +45,8 @@ model User {
   resumeText  String?  @db.Text // Store raw text here to avoid re-parsing
   skills      String[]
   designation String? // For Recruiter
+  graduationYear String? 
+  cgpa           Float?
 
   resetPasswordToken   String?
   resetPasswordExpires DateTime?

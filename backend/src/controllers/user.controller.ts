@@ -30,6 +30,8 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
         companyName: true,
         designation: true,
         institutionName: true,
+        graduationYear: true,
+        cgpa: true
       }
     });
 
@@ -52,7 +54,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     const {
       bio, location, website, linkedin, github, skills,
       companyName, designation, institutionName,
-      firstName, lastName
+      firstName, lastName, graduationYear, cgpa
     } = req.body;
 
     let resumeUrl: string | undefined = undefined;
@@ -101,6 +103,12 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       formattedSkills = skills.split(',').map((s: string) => s.trim());
     }
 
+    // convert cgpa to float
+    let parsedCgpa = undefined;
+    if (cgpa) {
+      parsedCgpa = parseFloat(cgpa);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -115,6 +123,8 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         companyName,
         designation,
         institutionName,
+        graduationYear,
+        ...(parsedCgpa && !isNaN(parsedCgpa) ? { cgpa: parsedCgpa } : {}), 
         ...(resumeUrl && { resumeUrl }), // Update URL if new file
         ...(resumeText && { resumeText }) // Update Text if new file
       }

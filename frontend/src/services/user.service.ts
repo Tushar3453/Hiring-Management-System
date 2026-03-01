@@ -19,6 +19,8 @@ export interface UserProfile {
   companyName?: string;
   designation?: string;
   institutionName?: string;
+  graduationYear?: string;
+  cgpa?: string;
 }
 
 // Get Profile
