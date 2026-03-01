@@ -1,23 +1,28 @@
 import { PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
+import bcrypt from 'bcrypt'; 
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding Database...');
 
+  const plainPassword = 'password123'; 
+  const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
   const recruiter = await prisma.user.create({
     data: {
       firstName: 'Admin',
       lastName: 'Recruiter',
       email: 'recruiter@hirehub.com',
-      password: 'hashedpassword123', 
+      password: hashedPassword, 
       role: 'RECRUITER',
       companyName: 'Tech Innovators Inc.',
     },
   });
 
   console.log(`Created Recruiter: ${recruiter.email}`);
+  console.log(`Login Password is: ${plainPassword}`); // Yaad rakhne ke liye log kar diya
 
   const jobTypes = ['Full Time', 'Part Time', 'Internship', 'Contract'];
   const expLevels = ['Fresher', '0-1 Years', '1-3 Years', '3-5 Years', '5+ Years'];
