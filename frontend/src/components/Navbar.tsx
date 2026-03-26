@@ -67,6 +67,8 @@ const Navbar = () => {
                 <Link to="/signup" className="bg-blue-600 text-white px-5 py-2 rounded-full font-medium hover:bg-blue-700 transition-all shadow-sm active:scale-95">
                   Get Started
                 </Link>
+                <button data-rentsolo-trigger>Widget</button>
+                <button data-rentsolo-public-trigger>public widget</button>
               </>
             ) : (
               // LOGGED IN STATE
